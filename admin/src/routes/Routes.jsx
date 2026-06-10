@@ -10,6 +10,7 @@ import Login from "../pages/Login";
 import Dashboard from "../pages/Dashboard";
 import Courses from "../pages/Courses";
 import CourseUpload from "../pages/CourseUpload";
+import CourseEdit from "../pages/CourseEdit";
 import CourseCurriculum from "../pages/CourseCurriculum";
 import Lessons from "../pages/Lessons";
 import Videos from "../pages/Videos";
@@ -40,6 +41,7 @@ const router = createBrowserRouter(
           <Route path="dashboard" element={<Dashboard />} />
           <Route path="courses" element={<Courses />} />
           <Route path="courses/upload" element={<CourseUpload />} />
+          <Route path="courses/:courseId/edit" element={<CourseEdit />} />
           <Route path="courses/:courseId/curriculum" element={<CourseCurriculum />} />
           <Route path="lessons" element={<Lessons />} />
           <Route path="videos" element={<Videos />} />

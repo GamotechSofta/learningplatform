@@ -8,7 +8,8 @@ export default function Header({ onMenuClick }) {
   const navigate = useNavigate();
   const title =
     pageTitles[pathname] ||
-    (pathname.includes("/curriculum") ? "Course Curriculum" : "Admin");
+    (pathname.includes("/edit") ? "Edit Course" :
+    pathname.includes("/curriculum") ? "Course Curriculum" : "Admin");
 
   const handleLogout = async () => {
     await logout();
