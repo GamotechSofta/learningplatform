@@ -25,6 +25,11 @@ export const createCategory = async (categoryData) => {
   return data.data;
 };
 
+export const updateCategory = async (id, categoryData) => {
+  const { data } = await api.put(`/api/categories/${id}`, categoryData);
+  return data.data;
+};
+
 export const deleteCategory = async (id) => {
   const { data } = await api.delete(`/api/categories/${id}`);
   return data;

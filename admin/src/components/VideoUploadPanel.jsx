@@ -89,7 +89,7 @@ export default function VideoUploadPanel({ lessonId, order = 0, disabled = false
           description: form.description || undefined,
           videoKey,
           thumbnailKey: form.thumbnailKey || undefined,
-          duration: Number(form.duration) || 0,
+          duration: Math.round((Number(form.duration) || 0) * 60),
           size,
           order,
           isPublished: form.isPublished,
@@ -107,7 +107,7 @@ export default function VideoUploadPanel({ lessonId, order = 0, disabled = false
           description: form.description || undefined,
           externalUrl: form.videoUrl,
           thumbnailKey: form.thumbnailKey || undefined,
-          duration: Number(form.duration) || 0,
+          duration: Math.round((Number(form.duration) || 0) * 60),
           order,
           isPublished: form.isPublished,
         });
@@ -288,13 +288,16 @@ export default function VideoUploadPanel({ lessonId, order = 0, disabled = false
           onChange={(url, key) => updateForm({ thumbnail: url, thumbnailKey: key })}
         />
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Duration (seconds)</label>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Duration (minutes)</label>
           <input
             type="number"
             min="0"
+            step="any"
+            inputMode="decimal"
             disabled={disabled}
             value={form.duration}
             onChange={(e) => updateForm({ duration: e.target.value })}
+            onWheel={(e) => e.currentTarget.blur()}
             className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50"
           />
         </div>

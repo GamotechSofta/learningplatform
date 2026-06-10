@@ -6,6 +6,7 @@ import {
   deleteCategory,
   getCategories,
   searchCategories,
+  updateCategory,
 } from "../services/categoryService";
 
 const slugify = (text) =>
@@ -25,7 +26,24 @@ export default function Categories() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [showForm, setShowForm] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({ name: "", description: "", thumbnail: "" });
+
+  const resetForm = () => {
+    setForm({ name: "", description: "", thumbnail: "" });
+    setEditingId(null);
+    setShowForm(false);
+  };
+
+  const startEdit = (cat) => {
+    setForm({
+      name: cat.name || "",
+      description: cat.description || "",
+      thumbnail: cat.thumbnail || "",
+    });
+    setEditingId(cat._id);
+    setShowForm(true);
+  };
 
   const loadCategories = async (query = "") => {
     try {
@@ -50,20 +68,27 @@ export default function Categories() {
     loadCategories(search);
   };
 
-  const handleCreate = async (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      await createCategory({
+      const payload = {
         name: form.name,
         slug: slugify(form.name),
         description: form.description,
         thumbnail: form.thumbnail || undefined,
-      });
-      setForm({ name: "", description: "", thumbnail: "" });
-      setShowForm(false);
-      loadCategories();
+      };
+      if (editingId) {
+        await updateCategory(editingId, payload);
+      } else {
+        await createCategory(payload);
+      }
+      resetForm();
+      loadCategories(search);
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to create category");
+      setError(
+        err.response?.data?.message ||
+          `Failed to ${editingId ? "update" : "create"} category`
+      );
     }
   };
 
@@ -84,10 +109,18 @@ export default function Categories() {
       action={
         <button
           type="button"
-          onClick={() => setShowForm((v) => !v)}
+          onClick={() => {
+            if (showForm) {
+              resetForm();
+            } else {
+              setEditingId(null);
+              setForm({ name: "", description: "", thumbnail: "" });
+              setShowForm(true);
+            }
+          }}
           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
         >
-          + Add Category
+          {showForm ? "Close" : "+ Add Category"}
         </button>
       }
     >
@@ -123,8 +156,10 @@ export default function Categories() {
       </form>
 
       {showForm && (
-        <form onSubmit={handleCreate} className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="font-semibold text-slate-900">New Category</h3>
+        <form onSubmit={handleSubmit} className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="font-semibold text-slate-900">
+            {editingId ? "Edit Category" : "New Category"}
+          </h3>
           <div className="mt-3 grid gap-3 sm:grid-cols-2">
             <input
               type="text"
@@ -150,9 +185,18 @@ export default function Categories() {
               />
             </div>
           </div>
-          <button type="submit" className="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500">
-            Save Category
-          </button>
+          <div className="mt-3 flex gap-2">
+            <button type="submit" className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500">
+              {editingId ? "Update Category" : "Save Category"}
+            </button>
+            <button
+              type="button"
+              onClick={resetForm}
+              className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700 hover:bg-slate-50"
+            >
+              Cancel
+            </button>
+          </div>
         </form>
       )}
 
@@ -183,13 +227,22 @@ export default function Categories() {
                       {cat.description || "No description"}
                     </p>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleDelete(cat._id)}
-                    className="shrink-0 text-xs text-red-600 hover:underline"
-                  >
-                    Delete
-                  </button>
+                  <div className="flex shrink-0 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => startEdit(cat)}
+                      className="text-xs text-blue-600 hover:underline"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(cat._id)}
+                      className="text-xs text-red-600 hover:underline"
+                    >
+                      Delete
+                    </button>
+                  </div>
                 </div>
                 <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
                   <span className="rounded-full bg-blue-50 px-2.5 py-1 font-medium text-blue-700">

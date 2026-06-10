@@ -210,7 +210,7 @@ export default function Videos() {
                     <div className="mt-2 flex flex-wrap gap-2">
                       {video.duration > 0 && (
                         <span className="rounded-full bg-slate-100 px-2 py-0.5 text-xs text-slate-600">
-                          {video.duration}s
+                          {+(video.duration / 60).toFixed(1)} min
                         </span>
                       )}
                       <span className={`rounded-full px-2 py-0.5 text-xs ${video.isPublished ? "bg-blue-100 text-blue-700" : "bg-amber-100 text-amber-700"}`}>

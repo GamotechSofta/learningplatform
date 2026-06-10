@@ -32,7 +32,7 @@ export default function VideoPlayerModal({ video, onClose }) {
           </video>
         </div>
         <div className="flex items-center justify-between px-5 py-3 text-sm text-slate-500">
-          <span>{video.duration > 0 ? `${video.duration}s` : "—"}</span>
+          <span>{video.duration > 0 ? `${+(video.duration / 60).toFixed(1)} min` : "—"}</span>
           <span>{video.isPublished ? "Published" : "Draft"}</span>
         </div>
       </div>
