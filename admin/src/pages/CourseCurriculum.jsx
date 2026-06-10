@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import PageShell from "../components/PageShell";
+import VideoUploadFields, { getDefaultVideoForm } from "../components/VideoUploadFields";
 import { getCourseById } from "../services/courseService";
 import { createLesson, deleteLesson, getLessonsByCourse } from "../services/lessonService";
-import { createVideo, deleteVideo, getVideosByLesson } from "../services/videoService";
+import { createVideo, deleteVideo, getVideosByLesson, uploadVideoFile } from "../services/videoService";
 
 export default function CourseCurriculum() {
   const { courseId } = useParams();
@@ -11,9 +12,12 @@ export default function CourseCurriculum() {
   const [lessons, setLessons] = useState([]);
   const [videosByLesson, setVideosByLesson] = useState({});
   const [loading, setLoading] = useState(true);
+  const [submittingLessonId, setSubmittingLessonId] = useState(null);
+  const [uploadProgress, setUploadProgress] = useState(null);
   const [error, setError] = useState("");
   const [lessonForm, setLessonForm] = useState({ title: "", order: 0 });
   const [videoForms, setVideoForms] = useState({});
+  const [videoFiles, setVideoFiles] = useState({});
 
   const loadData = async () => {
     try {
@@ -43,6 +47,13 @@ export default function CourseCurriculum() {
     loadData();
   }, [courseId]);
 
+  const updateVideoForm = (lessonId, updates) => {
+    setVideoForms((prev) => ({
+      ...prev,
+      [lessonId]: { ...(prev[lessonId] || getDefaultVideoForm()), ...updates },
+    }));
+  };
+
   const handleAddLesson = async (e) => {
     e.preventDefault();
     try {
@@ -56,18 +67,55 @@ export default function CourseCurriculum() {
 
   const handleAddVideo = async (e, lessonId) => {
     e.preventDefault();
-    const form = videoForms[lessonId] || { title: "", videoUrl: "", duration: 0 };
+    const form = videoForms[lessonId] || getDefaultVideoForm();
+    const uploadMode = form.uploadMode || "file";
+
+    setSubmittingLessonId(lessonId);
+    setUploadProgress(0);
+    setError("");
+
     try {
-      await createVideo({
-        ...form,
-        lesson: lessonId,
-        order: (videosByLesson[lessonId] || []).length,
-        duration: Number(form.duration) || 0,
-      });
-      setVideoForms((prev) => ({ ...prev, [lessonId]: { title: "", videoUrl: "", duration: 0 } }));
+      if (uploadMode === "file") {
+        const file = videoFiles[lessonId];
+        if (!file) {
+          setError("Please select a video file from your device");
+          return;
+        }
+
+        await uploadVideoFile(
+          {
+            file,
+            lessonId,
+            title: form.title,
+            description: form.description,
+            thumbnail: form.thumbnail,
+            duration: form.duration,
+            isPublished: form.isPublished,
+            order: (videosByLesson[lessonId] || []).length,
+          },
+          setUploadProgress
+        );
+        setVideoFiles((prev) => ({ ...prev, [lessonId]: null }));
+      } else {
+        await createVideo({
+          lesson: lessonId,
+          title: form.title,
+          description: form.description || undefined,
+          videoUrl: form.videoUrl,
+          thumbnail: form.thumbnail || undefined,
+          order: (videosByLesson[lessonId] || []).length,
+          duration: Number(form.duration) || 0,
+          isPublished: form.isPublished,
+        });
+      }
+
+      setVideoForms((prev) => ({ ...prev, [lessonId]: getDefaultVideoForm() }));
       await loadData();
     } catch (err) {
       setError(err.response?.data?.message || "Failed to upload video");
+    } finally {
+      setSubmittingLessonId(null);
+      setUploadProgress(null);
     }
   };
 
@@ -143,35 +191,21 @@ export default function CourseCurriculum() {
               ))}
             </ul>
 
-            <form onSubmit={(e) => handleAddVideo(e, lesson._id)} className="mt-4 grid gap-3 sm:grid-cols-4">
-              <input
-                type="text"
-                required
-                placeholder="Video title"
-                value={videoForms[lesson._id]?.title || ""}
-                onChange={(e) =>
-                  setVideoForms((prev) => ({
-                    ...prev,
-                    [lesson._id]: { ...prev[lesson._id], title: e.target.value, videoUrl: prev[lesson._id]?.videoUrl || "", duration: prev[lesson._id]?.duration || 0 },
-                  }))
-                }
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            <form onSubmit={(e) => handleAddVideo(e, lesson._id)} className="mt-4 rounded-lg border border-slate-100 bg-slate-50 p-4">
+              <h4 className="mb-3 text-sm font-medium text-slate-800">Add Video</h4>
+              <VideoUploadFields
+                form={videoForms[lesson._id] || getDefaultVideoForm()}
+                videoFile={videoFiles[lesson._id]}
+                uploadProgress={submittingLessonId === lesson._id ? uploadProgress : null}
+                onFormChange={(updates) => updateVideoForm(lesson._id, updates)}
+                onFileChange={(file) => setVideoFiles((prev) => ({ ...prev, [lesson._id]: file }))}
               />
-              <input
-                type="url"
-                required
-                placeholder="Video URL"
-                value={videoForms[lesson._id]?.videoUrl || ""}
-                onChange={(e) =>
-                  setVideoForms((prev) => ({
-                    ...prev,
-                    [lesson._id]: { ...prev[lesson._id], videoUrl: e.target.value, title: prev[lesson._id]?.title || "", duration: prev[lesson._id]?.duration || 0 },
-                  }))
-                }
-                className="rounded-lg border border-slate-300 px-3 py-2 text-sm sm:col-span-2"
-              />
-              <button type="submit" className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500">
-                Upload Video
+              <button
+                type="submit"
+                disabled={submittingLessonId === lesson._id}
+                className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60"
+              >
+                {submittingLessonId === lesson._id ? "Uploading..." : "Upload Video"}
               </button>
             </form>
           </div>

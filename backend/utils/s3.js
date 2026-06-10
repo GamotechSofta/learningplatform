@@ -1,6 +1,6 @@
 import path from "path";
 import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { Upload } from "@aws-sdk/lib-storage";
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
 let s3Client = null;
 
@@ -79,25 +79,25 @@ export const uploadImageToS3 = async (file, folder) => {
   return { key, url: getPublicUrl(key) };
 };
 
-export const uploadVideoToS3 = async (file) => {
+export const createPresignedVideoUpload = async (fileName, contentType) => {
   const bucket = process.env.AWS_BUCKET_NAME?.trim();
   if (!bucket) {
     throw new Error("AWS_BUCKET_NAME is not configured");
   }
 
-  const key = buildS3Key(UPLOAD_FOLDERS.videos, file.originalname);
+  if (!contentType?.startsWith("video/")) {
+    throw new Error("Only video files are allowed");
+  }
 
-  const upload = new Upload({
-    client: getS3Client(),
-    params: {
-      Bucket: bucket,
-      Key: key,
-      Body: file.buffer,
-      ContentType: file.mimetype,
-    },
+  const key = buildS3Key(UPLOAD_FOLDERS.videos, fileName);
+
+  const command = new PutObjectCommand({
+    Bucket: bucket,
+    Key: key,
+    ContentType: contentType,
   });
 
-  await upload.done();
+  const uploadUrl = await getSignedUrl(getS3Client(), command, { expiresIn: 3600 });
 
-  return { key, url: getPublicUrl(key) };
+  return { uploadUrl, key, videoUrl: getPublicUrl(key) };
 };

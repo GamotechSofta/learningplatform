@@ -1,44 +1,19 @@
 import Video from "../models/video.js";
 import Lesson from "../models/lesson.js";
 import asyncHandler from "../middleware/asyncHandler.js";
-import { uploadImageToS3, uploadVideoToS3 } from "../utils/s3.js";
+import { createPresignedVideoUpload } from "../utils/s3.js";
 
-export const uploadVideoFile = asyncHandler(async (req, res) => {
-  const lesson = await Lesson.findById(req.body.lesson);
+export const getVideoPresignUrl = asyncHandler(async (req, res) => {
+  const { fileName, contentType } = req.body;
 
-  if (!lesson) {
-    res.status(404);
-    throw new Error("Lesson not found");
-  }
-
-  const videoFile = req.file || req.files?.video?.[0];
-  if (!videoFile) {
+  if (!fileName || !contentType) {
     res.status(400);
-    throw new Error("No video file uploaded");
+    throw new Error("fileName and contentType are required");
   }
 
-  const { url: videoUrl } = await uploadVideoToS3(videoFile);
+  const result = await createPresignedVideoUpload(fileName, contentType);
 
-  let thumbnail = req.body.thumbnail || undefined;
-  if (req.files?.thumbnail?.[0]) {
-    const thumbResult = await uploadImageToS3(req.files.thumbnail[0], "videos");
-    thumbnail = thumbResult.url;
-  }
-
-  const existingCount = await Video.countDocuments({ lesson: lesson._id });
-
-  const video = await Video.create({
-    lesson: req.body.lesson,
-    title: req.body.title,
-    description: req.body.description,
-    videoUrl,
-    thumbnail,
-    duration: Number(req.body.duration) || 0,
-    order: existingCount,
-    isPublished: req.body.isPublished === "true",
-  });
-
-  res.status(201).json({ success: true, data: video });
+  res.json({ success: true, data: result });
 });
 
 export const createVideo = asyncHandler(async (req, res) => {
@@ -49,7 +24,10 @@ export const createVideo = asyncHandler(async (req, res) => {
     throw new Error("Lesson not found");
   }
 
-  const video = await Video.create(req.body);
+  const existingCount = await Video.countDocuments({ lesson: lesson._id });
+  const order = req.body.order ?? existingCount;
+
+  const video = await Video.create({ ...req.body, order });
   res.status(201).json({ success: true, data: video });
 });
 

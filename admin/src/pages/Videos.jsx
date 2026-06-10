@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import ImageUpload from "../components/ImageUpload";
 import PageShell from "../components/PageShell";
+import VideoUploadFields, { getDefaultVideoForm } from "../components/VideoUploadFields";
 import VideoPlayerModal from "../components/VideoPlayerModal";
 import ViewUploadTabs from "../components/ViewUploadTabs";
 import { getCategories, getCoursesByCategory } from "../services/categoryService";
@@ -10,7 +10,6 @@ import { createVideo, deleteVideo, getVideosByLesson, uploadVideoFile } from "..
 
 export default function Videos() {
   const [activeTab, setActiveTab] = useState("view");
-  const [uploadMode, setUploadMode] = useState("file");
   const [categories, setCategories] = useState([]);
   const [courses, setCourses] = useState([]);
   const [lessons, setLessons] = useState([]);
@@ -22,15 +21,9 @@ export default function Videos() {
   const [viewingVideo, setViewingVideo] = useState(null);
   const [loading, setLoading] = useState({ categories: true, courses: false, lessons: false, videos: false });
   const [submitting, setSubmitting] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(null);
   const [error, setError] = useState("");
-  const [form, setForm] = useState({
-    title: "",
-    description: "",
-    videoUrl: "",
-    thumbnail: "",
-    duration: "",
-    isPublished: false,
-  });
+  const [form, setForm] = useState(getDefaultVideoForm());
 
   const selectedCategory = categories.find((c) => c._id === categoryId);
   const selectedCourse = courses.find((c) => c._id === courseId);
@@ -100,29 +93,36 @@ export default function Videos() {
     if (!lessonId) return;
 
     setSubmitting(true);
+    setUploadProgress(null);
     setError("");
     try {
+      const uploadMode = form.uploadMode || "file";
+
       if (uploadMode === "file") {
         if (!videoFile) {
-          setError("Please select a video file");
+          setError("Please select a video file from your device");
           setSubmitting(false);
           return;
         }
-        const formData = new FormData();
-        formData.append("video", videoFile);
-        formData.append("lesson", lessonId);
-        formData.append("title", form.title);
-        formData.append("description", form.description);
-        formData.append("thumbnail", form.thumbnail);
-        formData.append("duration", form.duration || "0");
-        formData.append("isPublished", String(form.isPublished));
-        await uploadVideoFile(formData);
+        await uploadVideoFile(
+          {
+            file: videoFile,
+            lessonId,
+            title: form.title,
+            description: form.description,
+            thumbnail: form.thumbnail,
+            duration: form.duration,
+            isPublished: form.isPublished,
+            order: videos.length,
+          },
+          setUploadProgress
+        );
         setVideoFile(null);
       } else {
         await createVideo({
           lesson: lessonId,
           title: form.title,
-          description: form.description,
+          description: form.description || undefined,
           videoUrl: form.videoUrl,
           thumbnail: form.thumbnail || undefined,
           duration: Number(form.duration) || 0,
@@ -131,20 +131,14 @@ export default function Videos() {
         });
       }
 
-      setForm({
-        title: "",
-        description: "",
-        videoUrl: "",
-        thumbnail: "",
-        duration: "",
-        isPublished: false,
-      });
+      setForm(getDefaultVideoForm());
       loadVideos(lessonId);
       setActiveTab("view");
     } catch (err) {
       setError(err.response?.data?.message || "Failed to upload video");
     } finally {
       setSubmitting(false);
+      setUploadProgress(null);
     }
   };
 
@@ -309,115 +303,24 @@ export default function Videos() {
         <form onSubmit={handleSubmit} className="max-w-2xl rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <h3 className="font-semibold text-slate-900">Upload Video</h3>
 
-          <div className="mt-4 flex gap-2">
-            <button
-              type="button"
-              onClick={() => setUploadMode("file")}
-              className={`rounded-lg px-3 py-1.5 text-sm ${uploadMode === "file" ? "bg-slate-800 text-white" : "border border-slate-300 text-slate-600"}`}
-            >
-              Upload File
-            </button>
-            <button
-              type="button"
-              onClick={() => setUploadMode("url")}
-              className={`rounded-lg px-3 py-1.5 text-sm ${uploadMode === "url" ? "bg-slate-800 text-white" : "border border-slate-300 text-slate-600"}`}
-            >
-              Video URL
-            </button>
+          <div className="mt-4">
+            <VideoUploadFields
+              form={form}
+              videoFile={videoFile}
+              uploadProgress={uploadProgress}
+              disabled={!lessonId}
+              onFormChange={(updates) => setForm((prev) => ({ ...prev, ...updates }))}
+              onFileChange={setVideoFile}
+            />
           </div>
 
-          <div className="mt-4 space-y-4">
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Video Title</label>
-              <input
-                type="text"
-                required
-                disabled={!lessonId}
-                value={form.title}
-                onChange={(e) => setForm({ ...form, title: e.target.value })}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50"
-              />
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Description</label>
-              <textarea
-                rows={2}
-                disabled={!lessonId}
-                value={form.description}
-                onChange={(e) => setForm({ ...form, description: e.target.value })}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50"
-              />
-            </div>
-
-            {uploadMode === "file" ? (
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Video File</label>
-                <input
-                  type="file"
-                  accept="video/*"
-                  disabled={!lessonId}
-                  onChange={(e) => setVideoFile(e.target.files?.[0] || null)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-blue-50 file:px-3 file:py-1 file:text-sm file:text-blue-700 disabled:bg-slate-50"
-                />
-                {videoFile && (
-                  <p className="mt-1 text-xs text-slate-500">Selected: {videoFile.name}</p>
-                )}
-              </div>
-            ) : (
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Video URL</label>
-                <input
-                  type="url"
-                  required={uploadMode === "url"}
-                  disabled={!lessonId}
-                  value={form.videoUrl}
-                  onChange={(e) => setForm({ ...form, videoUrl: e.target.value })}
-                  placeholder="https://..."
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50"
-                />
-              </div>
-            )}
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <ImageUpload
-                folder="videos"
-                label="Video Thumbnail"
-                disabled={!lessonId}
-                value={form.thumbnail}
-                onChange={(url) => setForm({ ...form, thumbnail: url })}
-              />
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Duration (seconds)</label>
-                <input
-                  type="number"
-                  min="0"
-                  disabled={!lessonId}
-                  value={form.duration}
-                  onChange={(e) => setForm({ ...form, duration: e.target.value })}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50"
-                />
-              </div>
-            </div>
-
-            <label className="flex items-center gap-2 text-sm text-slate-700">
-              <input
-                type="checkbox"
-                disabled={!lessonId}
-                checked={form.isPublished}
-                onChange={(e) => setForm({ ...form, isPublished: e.target.checked })}
-              />
-              Publish video
-            </label>
-
-            <button
-              type="submit"
-              disabled={!lessonId || submitting}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60"
-            >
-              {submitting ? "Uploading..." : "Upload Video"}
-            </button>
-          </div>
+          <button
+            type="submit"
+            disabled={!lessonId || submitting}
+            className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60"
+          >
+            {submitting ? "Uploading..." : "Upload Video"}
+          </button>
         </form>
       )}
 

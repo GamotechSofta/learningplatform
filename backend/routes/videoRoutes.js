@@ -1,7 +1,7 @@
 import express from "express";
 import {
   createVideo,
-  uploadVideoFile,
+  getVideoPresignUrl,
   getVideos,
   getVideosByLesson,
   getVideoById,
@@ -10,7 +10,6 @@ import {
 } from "../controllers/videoController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import authorize from "../middleware/authorizeRoles.js";
-import { uploadVideo } from "../middleware/uploadMemory.js";
 
 const router = express.Router();
 
@@ -19,14 +18,10 @@ router.get("/lesson/:lessonId", getVideosByLesson);
 router.get("/:id", getVideoById);
 
 router.post(
-  "/upload",
+  "/presign",
   protect,
   authorize("instructor", "admin"),
-  uploadVideo.fields([
-    { name: "video", maxCount: 1 },
-    { name: "thumbnail", maxCount: 1 },
-  ]),
-  uploadVideoFile
+  getVideoPresignUrl
 );
 router.post("/", protect, authorize("instructor", "admin"), createVideo);
 router.put("/:id", protect, authorize("instructor", "admin"), updateVideo);
