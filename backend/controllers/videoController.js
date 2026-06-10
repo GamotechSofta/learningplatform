@@ -1,19 +1,73 @@
 import Video from "../models/video.js";
 import Lesson from "../models/lesson.js";
 import asyncHandler from "../middleware/asyncHandler.js";
-import { createPresignedVideoUpload } from "../utils/s3.js";
+import {
+  initMultipartVideoUpload,
+  uploadMultipartPartToS3,
+  completeMultipartVideoUpload,
+  abortMultipartVideoUpload,
+} from "../utils/s3.js";
 
-export const getVideoPresignUrl = asyncHandler(async (req, res) => {
-  const { fileName, contentType } = req.body;
+export const initVideoMultipartUpload = asyncHandler(async (req, res) => {
+  const { fileName, contentType, fileSize } = req.body;
 
-  if (!fileName || !contentType) {
+  if (!fileName) {
     res.status(400);
-    throw new Error("fileName and contentType are required");
+    throw new Error("fileName is required");
   }
 
-  const result = await createPresignedVideoUpload(fileName, contentType);
+  const result = await initMultipartVideoUpload(fileName, contentType, fileSize);
 
   res.json({ success: true, data: result });
+});
+
+export const uploadVideoMultipartPart = asyncHandler(async (req, res) => {
+  const { key, uploadId, partNumber } = req.body;
+
+  if (!key || !uploadId || !partNumber) {
+    res.status(400);
+    throw new Error("key, uploadId, and partNumber are required");
+  }
+
+  if (!req.file) {
+    res.status(400);
+    throw new Error("No video chunk uploaded");
+  }
+
+  const result = await uploadMultipartPartToS3(
+    key,
+    uploadId,
+    Number(partNumber),
+    req.file.buffer
+  );
+
+  res.json({ success: true, data: result });
+});
+
+export const completeVideoMultipartUpload = asyncHandler(async (req, res) => {
+  const { key, uploadId, parts } = req.body;
+
+  if (!key || !uploadId || !parts?.length) {
+    res.status(400);
+    throw new Error("key, uploadId, and parts are required");
+  }
+
+  const result = await completeMultipartVideoUpload(key, uploadId, parts);
+
+  res.json({ success: true, data: result });
+});
+
+export const abortVideoMultipartUpload = asyncHandler(async (req, res) => {
+  const { key, uploadId } = req.body;
+
+  if (!key || !uploadId) {
+    res.status(400);
+    throw new Error("key and uploadId are required");
+  }
+
+  await abortMultipartVideoUpload(key, uploadId);
+
+  res.json({ success: true, message: "Upload aborted" });
 });
 
 export const createVideo = asyncHandler(async (req, res) => {

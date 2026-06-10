@@ -1,8 +1,21 @@
 import path from "path";
-import { S3Client, PutObjectCommand } from "@aws-sdk/client-s3";
-import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
-
+import {
+  S3Client,
+  PutObjectCommand,
+  CreateMultipartUploadCommand,
+  UploadPartCommand,
+  CompleteMultipartUploadCommand,
+  AbortMultipartUploadCommand,
+} from "@aws-sdk/client-s3";
 let s3Client = null;
+
+export const VIDEO_CHUNK_BYTES = 50 * 1024 * 1024;
+
+const getBucket = () => {
+  const bucket = process.env.AWS_BUCKET_NAME?.trim();
+  if (!bucket) throw new Error("AWS_BUCKET_NAME is not configured");
+  return bucket;
+};
 
 const getS3Client = () => {
   if (s3Client) return s3Client;
@@ -12,9 +25,8 @@ const getS3Client = () => {
   const region = process.env.AWS_REGION?.trim();
 
   if (!accessKeyId || !secretAccessKey) {
-    throw new Error("AWS credentials are not configured. Set AWS_ACCESS_KEY_ID and AWS_SECRET_ACCESS_KEY in .env");
+    throw new Error("AWS credentials are not configured");
   }
-
   if (!region) {
     throw new Error("AWS_REGION is not configured");
   }
@@ -22,6 +34,8 @@ const getS3Client = () => {
   s3Client = new S3Client({
     region,
     credentials: { accessKeyId, secretAccessKey },
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED",
   });
 
   return s3Client;
@@ -33,6 +47,8 @@ export const UPLOAD_FOLDERS = {
   videoImages: "images/videos",
   videos: "videos",
 };
+
+export const MAX_VIDEO_BYTES = 5 * 1024 * 1024 * 1024;
 
 export const resolveImageFolder = (folder) => {
   const map = {
@@ -54,12 +70,22 @@ export const getPublicUrl = (key) => {
   return `${base}/${key}`;
 };
 
-export const uploadImageToS3 = async (file, folder) => {
-  const bucket = process.env.AWS_BUCKET_NAME?.trim();
-  if (!bucket) {
-    throw new Error("AWS_BUCKET_NAME is not configured");
-  }
+const resolveVideoContentType = (fileName, contentType) => {
+  if (contentType?.startsWith("video/")) return contentType;
+  const ext = path.extname(fileName).toLowerCase();
+  const map = {
+    ".mp4": "video/mp4",
+    ".webm": "video/webm",
+    ".mov": "video/quicktime",
+    ".avi": "video/x-msvideo",
+    ".mkv": "video/x-matroska",
+    ".m4v": "video/x-m4v",
+  };
+  return map[ext] || "video/mp4";
+};
 
+export const uploadImageToS3 = async (file, folder) => {
+  const bucket = getBucket();
   const s3Folder = resolveImageFolder(folder);
   if (!s3Folder) {
     throw new Error("Invalid image folder. Use: categories, courses, or videos");
@@ -79,25 +105,78 @@ export const uploadImageToS3 = async (file, folder) => {
   return { key, url: getPublicUrl(key) };
 };
 
-export const createPresignedVideoUpload = async (fileName, contentType) => {
-  const bucket = process.env.AWS_BUCKET_NAME?.trim();
-  if (!bucket) {
-    throw new Error("AWS_BUCKET_NAME is not configured");
-  }
+export const initMultipartVideoUpload = async (fileName, contentType, fileSize) => {
+  const bucket = getBucket();
 
-  if (!contentType?.startsWith("video/")) {
-    throw new Error("Only video files are allowed");
+  if (fileSize && fileSize > MAX_VIDEO_BYTES) {
+    throw new Error("Video must be 5GB or smaller");
   }
 
   const key = buildS3Key(UPLOAD_FOLDERS.videos, fileName);
+  const resolvedType = resolveVideoContentType(fileName, contentType);
 
-  const command = new PutObjectCommand({
-    Bucket: bucket,
-    Key: key,
-    ContentType: contentType,
-  });
+  const { UploadId } = await getS3Client().send(
+    new CreateMultipartUploadCommand({
+      Bucket: bucket,
+      Key: key,
+      ContentType: resolvedType,
+    })
+  );
 
-  const uploadUrl = await getSignedUrl(getS3Client(), command, { expiresIn: 3600 });
+  return {
+    uploadId: UploadId,
+    key,
+    videoUrl: getPublicUrl(key),
+    contentType: resolvedType,
+  };
+};
 
-  return { uploadUrl, key, videoUrl: getPublicUrl(key) };
+export const uploadMultipartPartToS3 = async (key, uploadId, partNumber, body) => {
+  const bucket = getBucket();
+
+  const result = await getS3Client().send(
+    new UploadPartCommand({
+      Bucket: bucket,
+      Key: key,
+      UploadId: uploadId,
+      PartNumber: partNumber,
+      Body: body,
+    })
+  );
+
+  return { PartNumber: partNumber, ETag: result.ETag };
+};
+
+export const completeMultipartVideoUpload = async (key, uploadId, parts) => {
+  const bucket = getBucket();
+
+  await getS3Client().send(
+    new CompleteMultipartUploadCommand({
+      Bucket: bucket,
+      Key: key,
+      UploadId: uploadId,
+      MultipartUpload: {
+        Parts: parts
+          .map((part) => ({
+            PartNumber: part.PartNumber,
+            ETag: part.ETag,
+          }))
+          .sort((a, b) => a.PartNumber - b.PartNumber),
+      },
+    })
+  );
+
+  return { key, videoUrl: getPublicUrl(key) };
+};
+
+export const abortMultipartVideoUpload = async (key, uploadId) => {
+  const bucket = getBucket();
+
+  await getS3Client().send(
+    new AbortMultipartUploadCommand({
+      Bucket: bucket,
+      Key: key,
+      UploadId: uploadId,
+    })
+  );
 };

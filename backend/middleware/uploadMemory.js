@@ -13,3 +13,15 @@ export const uploadImage = multer({
     }
   },
 });
+
+export const uploadVideoChunk = multer({
+  storage,
+  limits: { fileSize: 55 * 1024 * 1024 },
+  fileFilter: (_req, file, cb) => {
+    if (file.fieldname === "chunk") {
+      cb(null, true);
+    } else {
+      cb(new Error("Invalid upload field"));
+    }
+  },
+});

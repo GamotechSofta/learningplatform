@@ -1,5 +1,6 @@
-import axios from "axios";
 import api from "../lib/api";
+
+const PART_SIZE = 50 * 1024 * 1024;
 
 export const getVideosByLesson = async (lessonId) => {
   const { data } = await api.get(`/api/videos/lesson/${lessonId}`);
@@ -11,30 +12,79 @@ export const createVideo = async (videoData) => {
   return data.data;
 };
 
-export const getVideoPresignUrl = async (fileName, contentType) => {
-  const { data } = await api.post("/api/videos/presign", { fileName, contentType });
+const initMultipart = async (file) => {
+  const { data } = await api.post("/api/videos/multipart/init", {
+    fileName: file.name,
+    contentType: file.type || "video/mp4",
+    fileSize: file.size,
+  });
   return data.data;
 };
 
+const uploadPartViaApi = async (key, uploadId, partNumber, chunk, onPartProgress) => {
+  const formData = new FormData();
+  formData.append("chunk", chunk, `part-${partNumber}`);
+  formData.append("key", key);
+  formData.append("uploadId", uploadId);
+  formData.append("partNumber", String(partNumber));
+
+  const { data } = await api.post("/api/videos/multipart/part", formData, {
+    timeout: 15 * 60 * 1000,
+    onUploadProgress: (event) => {
+      if (onPartProgress && event.total) {
+        onPartProgress(event.loaded, event.total);
+      }
+    },
+  });
+
+  return data.data;
+};
+
+const completeMultipart = async (key, uploadId, parts) => {
+  const { data } = await api.post("/api/videos/multipart/complete", {
+    key,
+    uploadId,
+    parts,
+  });
+  return data.data.videoUrl;
+};
+
+const abortMultipart = async (key, uploadId) => {
+  await api.post("/api/videos/multipart/abort", { key, uploadId }).catch(() => {});
+};
+
 export const uploadVideoToS3 = async (file, onProgress) => {
-  const contentType = file.type || "video/mp4";
-  const { uploadUrl, videoUrl } = await getVideoPresignUrl(file.name, contentType);
+  const { uploadId, key, videoUrl } = await initMultipart(file);
+  const totalParts = Math.ceil(file.size / PART_SIZE);
+  const parts = [];
+  let uploadedBytes = 0;
 
   try {
-    await axios.put(uploadUrl, file, {
-      headers: { "Content-Type": contentType },
-      onUploadProgress: (event) => {
-        if (!onProgress || !event.total) return;
-        onProgress(Math.round((event.loaded * 100) / event.total));
-      },
-    });
-  } catch {
-    throw new Error(
-      "Failed to upload video to S3. Run `npm run configure:s3-cors` on the backend to allow browser uploads."
-    );
-  }
+    for (let partNumber = 1; partNumber <= totalParts; partNumber++) {
+      const start = (partNumber - 1) * PART_SIZE;
+      const end = Math.min(start + PART_SIZE, file.size);
+      const chunk = file.slice(start, end);
+      const chunkStartBytes = uploadedBytes;
 
-  return videoUrl;
+      const part = await uploadPartViaApi(key, uploadId, partNumber, chunk, (loaded) => {
+        if (!onProgress) return;
+        const current = chunkStartBytes + loaded;
+        onProgress(Math.round((current / file.size) * 95));
+      });
+
+      parts.push(part);
+      uploadedBytes += chunk.size;
+      onProgress?.(Math.round((uploadedBytes / file.size) * 95));
+    }
+
+    await completeMultipart(key, uploadId, parts);
+    onProgress?.(98);
+
+    return videoUrl;
+  } catch (err) {
+    await abortMultipart(key, uploadId);
+    throw err;
+  }
 };
 
 export const uploadVideoFile = async (payload, onProgress) => {
@@ -49,11 +99,7 @@ export const uploadVideoFile = async (payload, onProgress) => {
     order,
   } = payload;
 
-  const videoUrl = await uploadVideoToS3(file, (progress) => {
-    onProgress?.(Math.min(progress, 95));
-  });
-
-  onProgress?.(98);
+  const videoUrl = await uploadVideoToS3(file, onProgress);
 
   const video = await createVideo({
     lesson: lessonId,
