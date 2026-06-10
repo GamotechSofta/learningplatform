@@ -1,12 +1,12 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import PageShell from "../components/PageShell";
-import VideoUploadFields, { getDefaultVideoForm } from "../components/VideoUploadFields";
+import VideoUploadPanel from "../components/VideoUploadPanel";
 import VideoPlayerModal from "../components/VideoPlayerModal";
 import ViewUploadTabs from "../components/ViewUploadTabs";
 import { getCategories, getCoursesByCategory } from "../services/categoryService";
 import { getLessonsByCourse } from "../services/lessonService";
-import { createVideo, deleteVideo, getVideosByLesson, uploadVideoFile } from "../services/videoService";
+import { deleteVideo, getVideosByLesson } from "../services/videoService";
 
 export default function Videos() {
   const [activeTab, setActiveTab] = useState("view");
@@ -17,13 +17,9 @@ export default function Videos() {
   const [categoryId, setCategoryId] = useState("");
   const [courseId, setCourseId] = useState("");
   const [lessonId, setLessonId] = useState("");
-  const [videoFile, setVideoFile] = useState(null);
   const [viewingVideo, setViewingVideo] = useState(null);
   const [loading, setLoading] = useState({ categories: true, courses: false, lessons: false, videos: false });
-  const [submitting, setSubmitting] = useState(false);
-  const [uploadProgress, setUploadProgress] = useState(null);
   const [error, setError] = useState("");
-  const [form, setForm] = useState(getDefaultVideoForm());
 
   const selectedCategory = categories.find((c) => c._id === categoryId);
   const selectedCourse = courses.find((c) => c._id === courseId);
@@ -87,60 +83,6 @@ export default function Videos() {
   useEffect(() => {
     loadVideos(lessonId);
   }, [lessonId]);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!lessonId) return;
-
-    setSubmitting(true);
-    setUploadProgress(null);
-    setError("");
-    try {
-      const uploadMode = form.uploadMode || "file";
-
-      if (uploadMode === "file") {
-        if (!videoFile) {
-          setError("Please select a video file from your device");
-          setSubmitting(false);
-          return;
-        }
-        await uploadVideoFile(
-          {
-            file: videoFile,
-            lessonId,
-            title: form.title,
-            description: form.description,
-            thumbnail: form.thumbnail,
-            duration: form.duration,
-            isPublished: form.isPublished,
-            order: videos.length,
-          },
-          setUploadProgress
-        );
-        setVideoFile(null);
-      } else {
-        await createVideo({
-          lesson: lessonId,
-          title: form.title,
-          description: form.description || undefined,
-          videoUrl: form.videoUrl,
-          thumbnail: form.thumbnail || undefined,
-          duration: Number(form.duration) || 0,
-          order: videos.length,
-          isPublished: form.isPublished,
-        });
-      }
-
-      setForm(getDefaultVideoForm());
-      loadVideos(lessonId);
-      setActiveTab("view");
-    } catch (err) {
-      setError(err.response?.data?.message || "Failed to upload video");
-    } finally {
-      setSubmitting(false);
-      setUploadProgress(null);
-    }
-  };
 
   const handleDelete = async (id) => {
     if (!window.confirm("Delete this video?")) return;
@@ -300,28 +242,22 @@ export default function Videos() {
       )}
 
       {activeTab === "upload" && (
-        <form onSubmit={handleSubmit} className="max-w-2xl rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="font-semibold text-slate-900">Upload Video</h3>
-
-          <div className="mt-4">
-            <VideoUploadFields
-              form={form}
-              videoFile={videoFile}
-              uploadProgress={uploadProgress}
-              disabled={!lessonId}
-              onFormChange={(updates) => setForm((prev) => ({ ...prev, ...updates }))}
-              onFileChange={setVideoFile}
+        <div className="max-w-2xl rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="mb-4 font-semibold text-slate-900">Upload Video</h3>
+          {lessonId ? (
+            <VideoUploadPanel
+              key={lessonId}
+              lessonId={lessonId}
+              order={videos.length}
+              onCreated={() => {
+                loadVideos(lessonId);
+                setActiveTab("view");
+              }}
             />
-          </div>
-
-          <button
-            type="submit"
-            disabled={!lessonId || submitting}
-            className="mt-4 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60"
-          >
-            {submitting ? "Uploading..." : "Upload Video"}
-          </button>
-        </form>
+          ) : (
+            <p className="text-sm text-slate-500">Select a category, course, and lesson first.</p>
+          )}
+        </div>
       )}
 
       <VideoPlayerModal video={viewingVideo} onClose={() => setViewingVideo(null)} />

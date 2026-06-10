@@ -2,14 +2,27 @@ import path from "path";
 import {
   S3Client,
   PutObjectCommand,
+  DeleteObjectCommand,
   CreateMultipartUploadCommand,
   UploadPartCommand,
   CompleteMultipartUploadCommand,
   AbortMultipartUploadCommand,
 } from "@aws-sdk/client-s3";
-let s3Client = null;
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
-export const VIDEO_CHUNK_BYTES = 50 * 1024 * 1024;
+// 25 MB per part (S3 requires every part except the last to be >= 5 MB)
+export const VIDEO_PART_SIZE = 25 * 1024 * 1024;
+export const MAX_VIDEO_BYTES = 5 * 1024 * 1024 * 1024; // 5 GB hard cap
+const PRESIGN_EXPIRY_SECONDS = 60 * 60; // 1 hour
+
+export const UPLOAD_FOLDERS = {
+  categoryImages: "images/categories",
+  courseImages: "images/courses",
+  videoThumbnails: "thumbnails",
+  videos: "videos",
+};
+
+let s3Client = null;
 
 const getBucket = () => {
   const bucket = process.env.AWS_BUCKET_NAME?.trim();
@@ -17,6 +30,11 @@ const getBucket = () => {
   return bucket;
 };
 
+/**
+ * Single shared S3 client. Checksum calculation is forced to WHEN_REQUIRED so
+ * presigned URLs do NOT include x-amz-checksum-* query params, which browsers
+ * cannot reproduce on a direct PUT (would otherwise break direct uploads).
+ */
 const getS3Client = () => {
   if (s3Client) return s3Client;
 
@@ -25,7 +43,7 @@ const getS3Client = () => {
   const region = process.env.AWS_REGION?.trim();
 
   if (!accessKeyId || !secretAccessKey) {
-    throw new Error("AWS credentials are not configured");
+    throw new Error("AWS credentials are not configured (AWS_ACCESS_KEY_ID / AWS_SECRET_ACCESS_KEY)");
   }
   if (!region) {
     throw new Error("AWS_REGION is not configured");
@@ -41,38 +59,60 @@ const getS3Client = () => {
   return s3Client;
 };
 
-export const UPLOAD_FOLDERS = {
-  categoryImages: "images/categories",
-  courseImages: "images/courses",
-  videoImages: "images/videos",
-  videos: "videos",
+/**
+ * Base CloudFront URL. Prefers CDN_URL, falls back to legacy CLOUDFRONT_URL.
+ */
+export const getCdnBaseUrl = () => {
+  const base = process.env.CDN_URL || process.env.CLOUDFRONT_URL || "";
+  return base.replace(/\/+$/, "");
 };
 
-export const MAX_VIDEO_BYTES = 5 * 1024 * 1024 * 1024;
+/**
+ * Convert a stored S3 key into a public CloudFront URL.
+ * Never expose raw S3 URLs to clients.
+ */
+export const getPublicUrl = (key) => {
+  if (!key) return "";
+  if (/^https?:\/\//i.test(key)) return key; // already an absolute (external) URL
+  const base = getCdnBaseUrl();
+  const normalizedKey = String(key).replace(/^\/+/, "");
+  return base ? `${base}/${normalizedKey}` : `/${normalizedKey}`;
+};
+
+const slugifyBaseName = (fileName) => {
+  const base = path.basename(fileName || "", path.extname(fileName || ""));
+  const slug = base
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 80);
+  return slug || "file";
+};
+
+export const buildVideoKey = (fileName) => {
+  const ext = (path.extname(fileName || "").toLowerCase() || ".mp4");
+  return `${UPLOAD_FOLDERS.videos}/${Date.now()}-${slugifyBaseName(fileName)}${ext}`;
+};
 
 export const resolveImageFolder = (folder) => {
   const map = {
     categories: UPLOAD_FOLDERS.categoryImages,
     courses: UPLOAD_FOLDERS.courseImages,
-    videos: UPLOAD_FOLDERS.videoImages,
+    videos: UPLOAD_FOLDERS.videoThumbnails,
+    thumbnails: UPLOAD_FOLDERS.videoThumbnails,
   };
   return map[folder] || null;
 };
 
-export const buildS3Key = (folder, originalName) => {
-  const ext = path.extname(originalName).toLowerCase() || "";
+export const buildImageKey = (folder, originalName) => {
+  const ext = path.extname(originalName || "").toLowerCase() || "";
   const unique = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
   return `${folder}/${unique}${ext}`;
 };
 
-export const getPublicUrl = (key) => {
-  const base = (process.env.CLOUDFRONT_URL || "").replace(/\/$/, "");
-  return `${base}/${key}`;
-};
-
 const resolveVideoContentType = (fileName, contentType) => {
   if (contentType?.startsWith("video/")) return contentType;
-  const ext = path.extname(fileName).toLowerCase();
+  const ext = path.extname(fileName || "").toLowerCase();
   const map = {
     ".mp4": "video/mp4",
     ".webm": "video/webm",
@@ -84,14 +124,18 @@ const resolveVideoContentType = (fileName, contentType) => {
   return map[ext] || "video/mp4";
 };
 
+/**
+ * Small images (thumbnails) are still uploaded via the backend because they are
+ * tiny. Returns the S3 key (store the key, build the URL on read).
+ */
 export const uploadImageToS3 = async (file, folder) => {
   const bucket = getBucket();
   const s3Folder = resolveImageFolder(folder);
   if (!s3Folder) {
-    throw new Error("Invalid image folder. Use: categories, courses, or videos");
+    throw new Error("Invalid image folder. Use: categories, courses, videos, or thumbnails");
   }
 
-  const key = buildS3Key(s3Folder, file.originalname);
+  const key = buildImageKey(s3Folder, file.originalname);
 
   await getS3Client().send(
     new PutObjectCommand({
@@ -105,14 +149,17 @@ export const uploadImageToS3 = async (file, folder) => {
   return { key, url: getPublicUrl(key) };
 };
 
-export const initMultipartVideoUpload = async (fileName, contentType, fileSize) => {
+/* -------------------------------------------------------------------------- */
+/*                       Multipart upload (video files)                       */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Step 1 — create an S3 multipart upload session.
+ * The browser will upload parts directly to S3; the file never touches us.
+ */
+export const createMultipartUpload = async ({ fileName, contentType }) => {
   const bucket = getBucket();
-
-  if (fileSize && fileSize > MAX_VIDEO_BYTES) {
-    throw new Error("Video must be 5GB or smaller");
-  }
-
-  const key = buildS3Key(UPLOAD_FOLDERS.videos, fileName);
+  const key = buildVideoKey(fileName);
   const resolvedType = resolveVideoContentType(fileName, contentType);
 
   const { UploadId } = await getS3Client().send(
@@ -126,28 +173,36 @@ export const initMultipartVideoUpload = async (fileName, contentType, fileSize) 
   return {
     uploadId: UploadId,
     key,
-    videoUrl: getPublicUrl(key),
+    partSize: VIDEO_PART_SIZE,
     contentType: resolvedType,
   };
 };
 
-export const uploadMultipartPartToS3 = async (key, uploadId, partNumber, body) => {
+/**
+ * Step 2 — presigned URL for a single UploadPart request.
+ * The browser PUTs the chunk straight to this URL.
+ */
+export const getUploadPartUrl = async ({ key, uploadId, partNumber }) => {
   const bucket = getBucket();
 
-  const result = await getS3Client().send(
-    new UploadPartCommand({
-      Bucket: bucket,
-      Key: key,
-      UploadId: uploadId,
-      PartNumber: partNumber,
-      Body: body,
-    })
-  );
+  const command = new UploadPartCommand({
+    Bucket: bucket,
+    Key: key,
+    UploadId: uploadId,
+    PartNumber: Number(partNumber),
+  });
 
-  return { PartNumber: partNumber, ETag: result.ETag };
+  const url = await getSignedUrl(getS3Client(), command, {
+    expiresIn: PRESIGN_EXPIRY_SECONDS,
+  });
+
+  return { url };
 };
 
-export const completeMultipartVideoUpload = async (key, uploadId, parts) => {
+/**
+ * Step 3 — stitch the uploaded parts into the final object.
+ */
+export const completeMultipartUpload = async ({ key, uploadId, parts }) => {
   const bucket = getBucket();
 
   await getS3Client().send(
@@ -158,7 +213,7 @@ export const completeMultipartVideoUpload = async (key, uploadId, parts) => {
       MultipartUpload: {
         Parts: parts
           .map((part) => ({
-            PartNumber: part.PartNumber,
+            PartNumber: Number(part.PartNumber),
             ETag: part.ETag,
           }))
           .sort((a, b) => a.PartNumber - b.PartNumber),
@@ -166,10 +221,14 @@ export const completeMultipartVideoUpload = async (key, uploadId, parts) => {
     })
   );
 
-  return { key, videoUrl: getPublicUrl(key) };
+  return { videoKey: key, videoUrl: getPublicUrl(key) };
 };
 
-export const abortMultipartVideoUpload = async (key, uploadId) => {
+/**
+ * Cleanup — abort an incomplete multipart upload (cancel / unrecoverable error).
+ * S3 keeps orphaned parts (and bills for them) until aborted.
+ */
+export const abortMultipartUpload = async ({ key, uploadId }) => {
   const bucket = getBucket();
 
   await getS3Client().send(
@@ -177,6 +236,21 @@ export const abortMultipartVideoUpload = async (key, uploadId) => {
       Bucket: bucket,
       Key: key,
       UploadId: uploadId,
+    })
+  );
+};
+
+/**
+ * Delete an object from S3 (used when a video record is removed).
+ */
+export const deleteFromS3 = async (key) => {
+  if (!key || /^https?:\/\//i.test(key)) return;
+  const bucket = getBucket();
+
+  await getS3Client().send(
+    new DeleteObjectCommand({
+      Bucket: bucket,
+      Key: key,
     })
   );
 };

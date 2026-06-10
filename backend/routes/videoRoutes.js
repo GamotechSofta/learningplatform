@@ -2,7 +2,7 @@ import express from "express";
 import {
   createVideo,
   initVideoMultipartUpload,
-  uploadVideoMultipartPart,
+  presignVideoPart,
   completeVideoMultipartUpload,
   abortVideoMultipartUpload,
   getVideos,
@@ -13,7 +13,6 @@ import {
 } from "../controllers/videoController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import authorize from "../middleware/authorizeRoles.js";
-import { uploadVideoChunk } from "../middleware/uploadMemory.js";
 
 const router = express.Router();
 
@@ -21,6 +20,7 @@ router.get("/", getVideos);
 router.get("/lesson/:lessonId", getVideosByLesson);
 router.get("/:id", getVideoById);
 
+// Direct browser-to-S3 multipart upload (backend never receives the file body).
 router.post(
   "/multipart/init",
   protect,
@@ -28,11 +28,10 @@ router.post(
   initVideoMultipartUpload
 );
 router.post(
-  "/multipart/part",
+  "/multipart/presign",
   protect,
   authorize("instructor", "admin"),
-  uploadVideoChunk.single("chunk"),
-  uploadVideoMultipartPart
+  presignVideoPart
 );
 router.post(
   "/multipart/complete",

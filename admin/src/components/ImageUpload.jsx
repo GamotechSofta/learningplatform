@@ -19,8 +19,8 @@ export default function ImageUpload({
     setUploading(true);
     setError("");
     try {
-      const url = await uploadImage(file, folder);
-      onChange(url);
+      const { url, key } = await uploadImage(file, folder);
+      onChange(url, key);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to upload image");
     } finally {

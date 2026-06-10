@@ -2,12 +2,29 @@ import Video from "../models/video.js";
 import Lesson from "../models/lesson.js";
 import asyncHandler from "../middleware/asyncHandler.js";
 import {
-  initMultipartVideoUpload,
-  uploadMultipartPartToS3,
-  completeMultipartVideoUpload,
-  abortMultipartVideoUpload,
+  createMultipartUpload,
+  getUploadPartUrl,
+  completeMultipartUpload,
+  abortMultipartUpload,
+  deleteFromS3,
+  UPLOAD_FOLDERS,
+  MAX_VIDEO_BYTES,
 } from "../utils/s3.js";
 
+// Only allow presigning/completing keys inside the videos/ prefix so a caller
+// cannot get a signed URL for an arbitrary object in the bucket.
+const assertVideoKey = (key, res) => {
+  if (!key || !String(key).startsWith(`${UPLOAD_FOLDERS.videos}/`)) {
+    res.status(400);
+    throw new Error("Invalid or missing video key");
+  }
+};
+
+/**
+ * POST /api/videos/multipart/init
+ * Body: { fileName, contentType, fileSize? }
+ * Returns: { uploadId, key, partSize }
+ */
 export const initVideoMultipartUpload = asyncHandler(async (req, res) => {
   const { fileName, contentType, fileSize } = req.body;
 
@@ -16,72 +33,134 @@ export const initVideoMultipartUpload = asyncHandler(async (req, res) => {
     throw new Error("fileName is required");
   }
 
-  const result = await initMultipartVideoUpload(fileName, contentType, fileSize);
-
-  res.json({ success: true, data: result });
-});
-
-export const uploadVideoMultipartPart = asyncHandler(async (req, res) => {
-  const { key, uploadId, partNumber } = req.body;
-
-  if (!key || !uploadId || !partNumber) {
+  if (fileSize && Number(fileSize) > MAX_VIDEO_BYTES) {
     res.status(400);
-    throw new Error("key, uploadId, and partNumber are required");
+    throw new Error("Video must be 5GB or smaller");
   }
 
-  if (!req.file) {
-    res.status(400);
-    throw new Error("No video chunk uploaded");
-  }
+  const { uploadId, key, partSize } = await createMultipartUpload({
+    fileName,
+    contentType,
+  });
 
-  const result = await uploadMultipartPartToS3(
-    key,
-    uploadId,
-    Number(partNumber),
-    req.file.buffer
-  );
-
-  res.json({ success: true, data: result });
+  res.json({ success: true, data: { uploadId, key, partSize } });
 });
 
+/**
+ * POST /api/videos/multipart/presign
+ * Body: { uploadId, key, partNumber }
+ * Returns: { url }
+ */
+export const presignVideoPart = asyncHandler(async (req, res) => {
+  const { uploadId, key, partNumber } = req.body;
+
+  assertVideoKey(key, res);
+
+  if (!uploadId || !partNumber) {
+    res.status(400);
+    throw new Error("uploadId and partNumber are required");
+  }
+
+  const { url } = await getUploadPartUrl({ key, uploadId, partNumber });
+
+  res.json({ success: true, data: { url } });
+});
+
+/**
+ * POST /api/videos/multipart/complete
+ * Body: { uploadId, key, parts: [{ ETag, PartNumber }] }
+ * Returns: { videoKey, videoUrl }
+ */
 export const completeVideoMultipartUpload = asyncHandler(async (req, res) => {
-  const { key, uploadId, parts } = req.body;
+  const { uploadId, key, parts } = req.body;
 
-  if (!key || !uploadId || !parts?.length) {
+  assertVideoKey(key, res);
+
+  if (!uploadId || !Array.isArray(parts) || parts.length === 0) {
     res.status(400);
-    throw new Error("key, uploadId, and parts are required");
+    throw new Error("uploadId and a non-empty parts array are required");
   }
 
-  const result = await completeMultipartVideoUpload(key, uploadId, parts);
+  const invalidPart = parts.some((p) => !p?.ETag || !p?.PartNumber);
+  if (invalidPart) {
+    res.status(400);
+    throw new Error("Each part must include ETag and PartNumber");
+  }
+
+  const result = await completeMultipartUpload({ key, uploadId, parts });
 
   res.json({ success: true, data: result });
 });
 
+/**
+ * POST /api/videos/multipart/abort
+ * Body: { uploadId, key }
+ */
 export const abortVideoMultipartUpload = asyncHandler(async (req, res) => {
-  const { key, uploadId } = req.body;
+  const { uploadId, key } = req.body;
 
-  if (!key || !uploadId) {
+  assertVideoKey(key, res);
+
+  if (!uploadId) {
     res.status(400);
-    throw new Error("key and uploadId are required");
+    throw new Error("uploadId is required");
   }
 
-  await abortMultipartVideoUpload(key, uploadId);
+  await abortMultipartUpload({ key, uploadId });
 
   res.json({ success: true, message: "Upload aborted" });
 });
 
+/**
+ * POST /api/videos
+ * Persist metadata after the file is already on S3.
+ * Body: { lesson, title, description?, videoKey?, thumbnailKey?, externalUrl?, duration?, size?, order?, isPublished? }
+ */
 export const createVideo = asyncHandler(async (req, res) => {
-  const lesson = await Lesson.findById(req.body.lesson);
+  const {
+    lesson: lessonId,
+    title,
+    description,
+    videoKey,
+    thumbnailKey,
+    externalUrl,
+    duration,
+    size,
+    order,
+    isPublished,
+  } = req.body;
 
+  const lesson = await Lesson.findById(lessonId);
   if (!lesson) {
     res.status(404);
     throw new Error("Lesson not found");
   }
 
-  const existingCount = await Video.countDocuments({ lesson: lesson._id });
-  const order = req.body.order ?? existingCount;
+  if (!title) {
+    res.status(400);
+    throw new Error("title is required");
+  }
 
-  const video = await Video.create({ ...req.body, order });
+  if (!videoKey && !externalUrl) {
+    res.status(400);
+    throw new Error("videoKey (uploaded file) or externalUrl is required");
+  }
+
+  const existingCount = await Video.countDocuments({ lesson: lesson._id });
+
+  const video = await Video.create({
+    lesson: lesson._id,
+    title,
+    description: description || undefined,
+    videoKey: videoKey || undefined,
+    thumbnailKey: thumbnailKey || undefined,
+    externalUrl: externalUrl || undefined,
+    duration: Number(duration) || 0,
+    size: Number(size) || 0,
+    order: order ?? existingCount,
+    isPublished: isPublished === true || isPublished === "true",
+  });
+
   res.status(201).json({ success: true, data: video });
 });
 
@@ -135,7 +214,22 @@ export const updateVideo = asyncHandler(async (req, res) => {
     }
   }
 
-  Object.assign(video, req.body);
+  const updatable = [
+    "lesson",
+    "title",
+    "description",
+    "videoKey",
+    "thumbnailKey",
+    "externalUrl",
+    "duration",
+    "size",
+    "order",
+    "isPublished",
+  ];
+  for (const field of updatable) {
+    if (req.body[field] !== undefined) video[field] = req.body[field];
+  }
+
   const updatedVideo = await video.save();
 
   res.json({ success: true, data: updatedVideo });
@@ -148,6 +242,12 @@ export const deleteVideo = asyncHandler(async (req, res) => {
     res.status(404);
     throw new Error("Video not found");
   }
+
+  // Best-effort cleanup of S3 objects; never block the DB delete on this.
+  await Promise.allSettled([
+    video.videoKey ? deleteFromS3(video.videoKey) : Promise.resolve(),
+    video.thumbnailKey ? deleteFromS3(video.thumbnailKey) : Promise.resolve(),
+  ]);
 
   await video.deleteOne();
   res.json({ success: true, message: "Video removed" });
