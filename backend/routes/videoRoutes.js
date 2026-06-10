@@ -10,7 +10,7 @@ import {
 } from "../controllers/videoController.js";
 import { protect } from "../middleware/authMiddleware.js";
 import authorize from "../middleware/authorizeRoles.js";
-import uploadVideo from "../middleware/uploadVideo.js";
+import { uploadVideo } from "../middleware/uploadMemory.js";
 
 const router = express.Router();
 
@@ -22,7 +22,10 @@ router.post(
   "/upload",
   protect,
   authorize("instructor", "admin"),
-  uploadVideo.single("video"),
+  uploadVideo.fields([
+    { name: "video", maxCount: 1 },
+    { name: "thumbnail", maxCount: 1 },
+  ]),
   uploadVideoFile
 );
 router.post("/", protect, authorize("instructor", "admin"), createVideo);

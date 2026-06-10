@@ -13,6 +13,8 @@
     "seed:categories": "node scripts/seedCategories.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.1065.0",
+    "@aws-sdk/lib-storage": "^3.1065.0",
     "axios": "^1.17.0",
     "bcryptjs": "^3.0.3",
     "cookie-parser": "^1.4.7",

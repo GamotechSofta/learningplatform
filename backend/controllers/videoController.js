@@ -1,6 +1,7 @@
 import Video from "../models/video.js";
 import Lesson from "../models/lesson.js";
 import asyncHandler from "../middleware/asyncHandler.js";
+import { uploadImageToS3, uploadVideoToS3 } from "../utils/s3.js";
 
 export const uploadVideoFile = asyncHandler(async (req, res) => {
   const lesson = await Lesson.findById(req.body.lesson);
@@ -10,12 +11,20 @@ export const uploadVideoFile = asyncHandler(async (req, res) => {
     throw new Error("Lesson not found");
   }
 
-  if (!req.file) {
+  const videoFile = req.file || req.files?.video?.[0];
+  if (!videoFile) {
     res.status(400);
     throw new Error("No video file uploaded");
   }
 
-  const videoUrl = `${req.protocol}://${req.get("host")}/uploads/videos/${req.file.filename}`;
+  const { url: videoUrl } = await uploadVideoToS3(videoFile);
+
+  let thumbnail = req.body.thumbnail || undefined;
+  if (req.files?.thumbnail?.[0]) {
+    const thumbResult = await uploadImageToS3(req.files.thumbnail[0], "videos");
+    thumbnail = thumbResult.url;
+  }
+
   const existingCount = await Video.countDocuments({ lesson: lesson._id });
 
   const video = await Video.create({
@@ -23,7 +32,7 @@ export const uploadVideoFile = asyncHandler(async (req, res) => {
     title: req.body.title,
     description: req.body.description,
     videoUrl,
-    thumbnail: req.body.thumbnail,
+    thumbnail,
     duration: Number(req.body.duration) || 0,
     order: existingCount,
     isPublished: req.body.isPublished === "true",

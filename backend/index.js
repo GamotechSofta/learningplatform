@@ -1,9 +1,9 @@
+import "./config/loadEnv.js";
 import express from "express";
 import path from "path";
 import { fileURLToPath } from "url";
 import cors from "cors";
 import cookieParser from "cookie-parser";
-import dotenv from "dotenv";
 import connectDB from "./config/db.js";
 import errorHandler from "./middleware/errorHandler.js";
 import authRoutes from "./routes/authRoutes.js";
@@ -12,8 +12,7 @@ import categoryRoutes from "./routes/categoryRoutes.js";
 import courseRoutes from "./routes/courseRoutes.js";
 import lessonRoutes from "./routes/lessonRoutes.js";
 import videoRoutes from "./routes/videoRoutes.js";
-
-dotenv.config();
+import uploadRoutes from "./routes/uploadRoutes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -52,6 +51,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/courses", courseRoutes);
 app.use("/api/lessons", lessonRoutes);
 app.use("/api/videos", videoRoutes);
+app.use("/api/upload", uploadRoutes);
 
 app.use(errorHandler);
 

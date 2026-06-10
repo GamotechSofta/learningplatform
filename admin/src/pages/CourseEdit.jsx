@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import ImageUpload from "../components/ImageUpload";
 import PageShell from "../components/PageShell";
 import { getCategories } from "../services/categoryService";
 import { getCourseById, updateCourse } from "../services/courseService";
@@ -163,15 +164,12 @@ export default function CourseEdit() {
                 </select>
               </div>
             </div>
-            <div>
-              <label className="mb-1 block text-sm font-medium text-slate-700">Thumbnail URL</label>
-              <input
-                type="url"
-                value={form.thumbnail}
-                onChange={(e) => updateForm("thumbnail", e.target.value)}
-                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-              />
-            </div>
+            <ImageUpload
+              folder="courses"
+              label="Course Thumbnail"
+              value={form.thumbnail}
+              onChange={(url) => updateForm("thumbnail", url)}
+            />
           </div>
         </div>
 

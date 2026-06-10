@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import ImageUpload from "../components/ImageUpload";
 import PageShell from "../components/PageShell";
 import VideoPlayerModal from "../components/VideoPlayerModal";
 import ViewUploadTabs from "../components/ViewUploadTabs";
@@ -379,16 +380,13 @@ export default function Videos() {
             )}
 
             <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Thumbnail URL</label>
-                <input
-                  type="url"
-                  disabled={!lessonId}
-                  value={form.thumbnail}
-                  onChange={(e) => setForm({ ...form, thumbnail: e.target.value })}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50"
-                />
-              </div>
+              <ImageUpload
+                folder="videos"
+                label="Video Thumbnail"
+                disabled={!lessonId}
+                value={form.thumbnail}
+                onChange={(url) => setForm({ ...form, thumbnail: url })}
+              />
               <div>
                 <label className="mb-1 block text-sm font-medium text-slate-700">Duration (seconds)</label>
                 <input

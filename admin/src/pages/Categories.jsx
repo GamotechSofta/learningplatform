@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import ImageUpload from "../components/ImageUpload";
 import PageShell from "../components/PageShell";
 import {
   createCategory,
@@ -140,24 +141,15 @@ export default function Categories() {
               onChange={(e) => setForm({ ...form, description: e.target.value })}
               className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
             />
-            <input
-              type="url"
-              placeholder="Thumbnail image URL"
-              value={form.thumbnail}
-              onChange={(e) => setForm({ ...form, thumbnail: e.target.value })}
-              className="rounded-lg border border-slate-300 px-3 py-2 text-sm sm:col-span-2"
-            />
+            <div className="sm:col-span-2">
+              <ImageUpload
+                folder="categories"
+                label="Category Thumbnail"
+                value={form.thumbnail}
+                onChange={(url) => setForm({ ...form, thumbnail: url })}
+              />
+            </div>
           </div>
-          {form.thumbnail && (
-            <img
-              src={form.thumbnail}
-              alt="Thumbnail preview"
-              className="mt-3 h-32 w-full rounded-lg border border-slate-200 object-cover"
-              onError={(e) => {
-                e.currentTarget.style.display = "none";
-              }}
-            />
-          )}
           <button type="submit" className="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500">
             Save Category
           </button>
