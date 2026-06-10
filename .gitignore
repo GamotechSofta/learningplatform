@@ -1,0 +1,124 @@
+# =========================
+# Node.js / React
+# =========================
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+build/
+dist/
+coverage/
+
+# React
+/.cache
+.eslintcache
+
+# Logs
+logs
+*.log
+
+# OS Files
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# =========================
+# Flutter
+# =========================
+
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+
+# Flutter generated files
+.flutter-versions
+.metadata
+
+# Android
+android/.gradle/
+android/app/debug
+android/app/profile
+android/app/release
+
+# iOS
+ios/Pods/
+ios/.symlinks/
+ios/Flutter/.last_build_id
+
+# MacOS
+macos/Flutter/ephemeral/
+
+# Linux
+linux/flutter/ephemeral/
+
+# Windows
+windows/flutter/ephemeral/
+
+# Web
+.flutter_build/
+
+# Generated files
+*.lock
+
+# Keep pubspec.lock for apps
+!pubspec.lock
+
+# =========================
+# Secrets & Keys
+# =========================
+
+*.pem
+*.key
+*.crt
+*.p12
+*.jks
+*.keystore
+
+google-services.json
+GoogleService-Info.plist
+firebase-adminsdk*.json
+
+# AWS
+.aws/
+*.aws
+
+# =========================
+# Temporary Files
+# =========================
+
+tmp/
+temp/
+.cache/
+*.tmp
+
+# =========================
+# Package Managers
+# =========================
+
+.pnp
+.pnp.js
+
+# =========================
+# Misc
+# =========================
+
+*.pid
+*.seed
+*.pid.lock
