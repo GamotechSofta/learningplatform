@@ -1,0 +1,215 @@
+import { useEffect, useState } from "react";
+import PageShell from "../components/PageShell";
+import {
+  createCategory,
+  deleteCategory,
+  getCategories,
+  searchCategories,
+} from "../services/categoryService";
+
+const slugify = (text) =>
+  text
+    .toLowerCase()
+    .trim()
+    .replace(/[^\w\s-]/g, "")
+    .replace(/[\s_-]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+
+const getCoursesCount = (cat) =>
+  typeof cat.coursesCount === "number" ? cat.coursesCount : cat.courses?.length || 0;
+
+export default function Categories() {
+  const [categories, setCategories] = useState([]);
+  const [search, setSearch] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [showForm, setShowForm] = useState(false);
+  const [form, setForm] = useState({ name: "", description: "", thumbnail: "" });
+
+  const loadCategories = async (query = "") => {
+    try {
+      setLoading(true);
+      const result = query.trim()
+        ? await searchCategories(query)
+        : await getCategories();
+      setCategories(result.data);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to load categories");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadCategories();
+  }, []);
+
+  const handleSearch = (e) => {
+    e.preventDefault();
+    loadCategories(search);
+  };
+
+  const handleCreate = async (e) => {
+    e.preventDefault();
+    try {
+      await createCategory({
+        name: form.name,
+        slug: slugify(form.name),
+        description: form.description,
+        thumbnail: form.thumbnail || undefined,
+      });
+      setForm({ name: "", description: "", thumbnail: "" });
+      setShowForm(false);
+      loadCategories();
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to create category");
+    }
+  };
+
+  const handleDelete = async (id) => {
+    if (!window.confirm("Delete this category?")) return;
+    try {
+      await deleteCategory(id);
+      loadCategories(search);
+    } catch (err) {
+      setError(err.response?.data?.message || "Failed to delete category");
+    }
+  };
+
+  return (
+    <PageShell
+      title="Categories"
+      breadcrumbs={["Dashboard", "Categories"]}
+      action={
+        <button
+          type="button"
+          onClick={() => setShowForm((v) => !v)}
+          className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500"
+        >
+          + Add Category
+        </button>
+      }
+    >
+      {error && (
+        <div className="mb-4 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
+          {error}
+        </div>
+      )}
+
+      <form onSubmit={handleSearch} className="mb-6 flex gap-2">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search categories (Marketing, SEO, Searching...)"
+          className="flex-1 rounded-lg border border-slate-300 px-3 py-2 text-sm"
+        />
+        <button type="submit" className="rounded-lg bg-slate-800 px-4 py-2 text-sm text-white hover:bg-slate-700">
+          Search
+        </button>
+        {search && (
+          <button
+            type="button"
+            onClick={() => {
+              setSearch("");
+              loadCategories();
+            }}
+            className="rounded-lg border border-slate-300 px-4 py-2 text-sm text-slate-700"
+          >
+            Clear
+          </button>
+        )}
+      </form>
+
+      {showForm && (
+        <form onSubmit={handleCreate} className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+          <h3 className="font-semibold text-slate-900">New Category</h3>
+          <div className="mt-3 grid gap-3 sm:grid-cols-2">
+            <input
+              type="text"
+              required
+              placeholder="Category name"
+              value={form.name}
+              onChange={(e) => setForm({ ...form, name: e.target.value })}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+            <input
+              type="text"
+              placeholder="Description"
+              value={form.description}
+              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+            <input
+              type="url"
+              placeholder="Thumbnail image URL"
+              value={form.thumbnail}
+              onChange={(e) => setForm({ ...form, thumbnail: e.target.value })}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm sm:col-span-2"
+            />
+          </div>
+          {form.thumbnail && (
+            <img
+              src={form.thumbnail}
+              alt="Thumbnail preview"
+              className="mt-3 h-32 w-full rounded-lg border border-slate-200 object-cover"
+              onError={(e) => {
+                e.currentTarget.style.display = "none";
+              }}
+            />
+          )}
+          <button type="submit" className="mt-3 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-500">
+            Save Category
+          </button>
+        </form>
+      )}
+
+      {loading ? (
+        <p className="text-sm text-slate-500">Loading categories...</p>
+      ) : (
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {categories.map((cat) => (
+            <div key={cat._id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
+              <div className="h-36 bg-slate-100">
+                {cat.thumbnail ? (
+                  <img
+                    src={cat.thumbnail}
+                    alt={cat.name}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
+                  <div className="flex h-full items-center justify-center text-sm text-slate-400">
+                    No thumbnail
+                  </div>
+                )}
+              </div>
+              <div className="p-5">
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <h3 className="font-semibold text-slate-900">{cat.name}</h3>
+                    <p className="mt-1 text-sm text-slate-500">
+                      {cat.description || "No description"}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(cat._id)}
+                    className="shrink-0 text-xs text-red-600 hover:underline"
+                  >
+                    Delete
+                  </button>
+                </div>
+                <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                  <span className="rounded-full bg-blue-50 px-2.5 py-1 font-medium text-blue-700">
+                    {getCoursesCount(cat)} {getCoursesCount(cat) === 1 ? "course" : "courses"}
+                  </span>
+                  <span className="text-slate-400">{cat.slug}</span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </PageShell>
+  );
+}
