@@ -1,5 +1,6 @@
 import { useRef, useState } from "react";
 import ImageUpload from "./ImageUpload";
+import UploadCompleteModal from "./UploadCompleteModal";
 import useVideoUpload from "../hooks/useVideoUpload";
 import { createVideo } from "../services/videoService";
 import { titleFromFileName } from "../utils/videoFileName";
@@ -48,6 +49,7 @@ export default function VideoUploadPanel({ lessonId, order = 0, disabled = false
   const [file, setFile] = useState(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
+  const [completeMessage, setCompleteMessage] = useState("");
   const fileInputRef = useRef(null);
 
   const upload = useVideoUpload();
@@ -114,8 +116,10 @@ export default function VideoUploadPanel({ lessonId, order = 0, disabled = false
         });
       }
 
+      const savedTitle = form.title.trim();
       resetAll();
       onCreated?.();
+      setCompleteMessage(`"${savedTitle}" was uploaded successfully.`);
     } catch (err) {
       if (err?.message !== "Upload canceled") {
         setError(err?.response?.data?.message || err?.message || "Failed to add video");
@@ -337,6 +341,13 @@ export default function VideoUploadPanel({ lessonId, order = 0, disabled = false
       >
         {saving ? "Working..." : "Add Video"}
       </button>
+
+      <UploadCompleteModal
+        open={Boolean(completeMessage)}
+        title="Upload completed"
+        message={completeMessage}
+        onClose={() => setCompleteMessage("")}
+      />
     </form>
   );
 }

@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import UploadCompleteModal from "./UploadCompleteModal";
 import useVideoUpload from "../hooks/useVideoUpload";
 import { createVideo } from "../services/videoService";
 import {
@@ -52,6 +53,7 @@ export default function BulkVideoUploadPanel({
   const [running, setRunning] = useState(false);
   const [error, setError] = useState("");
   const [currentIndex, setCurrentIndex] = useState(-1);
+  const [completeMessage, setCompleteMessage] = useState("");
   const filesInputRef = useRef(null);
   const folderInputRef = useRef(null);
   const cancelRef = useRef(false);
@@ -127,6 +129,7 @@ export default function BulkVideoUploadPanel({
 
     let nextOrder = order;
     let uploadedCount = 0;
+    let failedCount = 0;
 
     for (let i = 0; i < queue.length; i++) {
       if (cancelRef.current) break;
@@ -162,6 +165,7 @@ export default function BulkVideoUploadPanel({
           setItemStatus(item.id, { status: "pending", error: "" });
           break;
         }
+        failedCount += 1;
         setItemStatus(item.id, {
           status: "error",
           error: err?.response?.data?.message || err?.message || "Upload failed",
@@ -174,7 +178,14 @@ export default function BulkVideoUploadPanel({
     setRunning(false);
     setCurrentIndex(-1);
 
-    if (uploadedCount > 0) onCreated?.();
+    if (uploadedCount > 0) {
+      onCreated?.();
+      const summary =
+        failedCount > 0
+          ? `${uploadedCount} video(s) uploaded successfully. ${failedCount} failed.`
+          : `${uploadedCount} video(s) uploaded successfully.`;
+      setCompleteMessage(summary);
+    }
   };
 
   const handleCancel = async () => {
@@ -375,6 +386,13 @@ export default function BulkVideoUploadPanel({
           </button>
         )}
       </div>
+
+      <UploadCompleteModal
+        open={Boolean(completeMessage)}
+        title="Upload completed"
+        message={completeMessage}
+        onClose={() => setCompleteMessage("")}
+      />
     </div>
   );
 }
