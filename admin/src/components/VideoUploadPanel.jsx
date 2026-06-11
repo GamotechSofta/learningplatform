@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import ImageUpload from "./ImageUpload";
 import useVideoUpload from "../hooks/useVideoUpload";
 import { createVideo } from "../services/videoService";
+import { titleFromFileName } from "../utils/videoFileName";
 
 const emptyForm = {
   title: "",
@@ -203,7 +204,13 @@ export default function VideoUploadPanel({ lessonId, order = 0, disabled = false
               type="file"
               accept="video/*"
               disabled={disabled || upload.isActive}
-              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              onChange={(e) => {
+                const selected = e.target.files?.[0] || null;
+                setFile(selected);
+                if (selected && !form.title.trim()) {
+                  updateForm({ title: titleFromFileName(selected.name) });
+                }
+              }}
               className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-blue-50 file:px-3 file:py-1 file:text-sm file:text-blue-700 disabled:bg-slate-50"
             />
             {file && !showProgress && (

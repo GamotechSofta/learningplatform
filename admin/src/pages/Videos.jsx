@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import PageShell from "../components/PageShell";
 import VideoUploadPanel from "../components/VideoUploadPanel";
+import BulkVideoUploadPanel from "../components/BulkVideoUploadPanel";
 import VideoPlayerModal from "../components/VideoPlayerModal";
 import ViewUploadTabs from "../components/ViewUploadTabs";
 import { getCategories, getCoursesByCategory } from "../services/categoryService";
@@ -10,6 +11,7 @@ import { deleteVideo, getVideosByLesson } from "../services/videoService";
 
 export default function Videos() {
   const [activeTab, setActiveTab] = useState("view");
+  const [uploadMode, setUploadMode] = useState("single");
   const [categories, setCategories] = useState([]);
   const [courses, setCourses] = useState([]);
   const [lessons, setLessons] = useState([]);
@@ -243,17 +245,52 @@ export default function Videos() {
 
       {activeTab === "upload" && (
         <div className="w-full rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="mb-4 font-semibold text-slate-900">Upload Video</h3>
+          <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+            <h3 className="font-semibold text-slate-900">Upload Video</h3>
+            <div className="inline-flex rounded-lg border border-slate-200 bg-slate-50 p-1">
+              <button
+                type="button"
+                onClick={() => setUploadMode("single")}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                  uploadMode === "single"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Single Video
+              </button>
+              <button
+                type="button"
+                onClick={() => setUploadMode("bulk")}
+                className={`rounded-md px-3 py-1.5 text-sm font-medium ${
+                  uploadMode === "bulk"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-600 hover:text-slate-900"
+                }`}
+              >
+                Bulk / Folder
+              </button>
+            </div>
+          </div>
           {lessonId ? (
-            <VideoUploadPanel
-              key={lessonId}
-              lessonId={lessonId}
-              order={videos.length}
-              onCreated={() => {
-                loadVideos(lessonId);
-                setActiveTab("view");
-              }}
-            />
+            uploadMode === "single" ? (
+              <VideoUploadPanel
+                key={lessonId}
+                lessonId={lessonId}
+                order={videos.length}
+                onCreated={() => {
+                  loadVideos(lessonId);
+                  setActiveTab("view");
+                }}
+              />
+            ) : (
+              <BulkVideoUploadPanel
+                key={`${lessonId}-bulk`}
+                lessonId={lessonId}
+                order={videos.length}
+                onCreated={() => loadVideos(lessonId)}
+              />
+            )
           ) : (
             <p className="text-sm text-slate-500">Select a category, course, and lesson first.</p>
           )}

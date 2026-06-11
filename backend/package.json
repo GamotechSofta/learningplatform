@@ -11,6 +11,7 @@
     "dev": "nodemon index.js",
     "seed:admin": "node scripts/seedAdmin.js",
     "seed:categories": "node scripts/seedCategories.js",
+    "seed:capcut-videos": "node scripts/seedCapcutVideos.js",
     "configure:s3-cors": "node scripts/configureS3Cors.js"
   },
   "dependencies": {
