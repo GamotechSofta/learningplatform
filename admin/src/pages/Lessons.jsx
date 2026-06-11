@@ -4,7 +4,13 @@ import PageShell from "../components/PageShell";
 import LessonDetailModal from "../components/LessonDetailModal";
 import ViewUploadTabs from "../components/ViewUploadTabs";
 import { getCategories, getCoursesByCategory } from "../services/categoryService";
-import { createLesson, deleteLesson, getLessonWithVideos, getLessonsByCourse } from "../services/lessonService";
+import {
+  createLesson,
+  deleteLesson,
+  getLessonWithVideos,
+  getLessonsByCourse,
+  updateLesson,
+} from "../services/lessonService";
 
 export default function Lessons() {
   const navigate = useNavigate();
@@ -19,12 +25,36 @@ export default function Lessons() {
   const [loadingDetail, setLoadingDetail] = useState(false);
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [editingId, setEditingId] = useState(null);
   const [form, setForm] = useState({
     title: "",
     description: "",
     isFree: false,
     isPublished: false,
   });
+
+  const resetForm = () => {
+    setForm({ title: "", description: "", isFree: false, isPublished: false });
+    setEditingId(null);
+  };
+
+  const startEdit = (lesson) => {
+    setForm({
+      title: lesson.title || "",
+      description: lesson.description || "",
+      isFree: lesson.isFree || false,
+      isPublished: lesson.isPublished || false,
+    });
+    setEditingId(lesson._id);
+    setActiveTab("upload");
+  };
+
+  const handleTabChange = (tab) => {
+    if (tab === "view" || (tab === "upload" && !editingId)) {
+      resetForm();
+    }
+    setActiveTab(tab);
+  };
 
   const selectedCategory = categories.find((c) => c._id === categoryId);
   const selectedCourse = courses.find((c) => c._id === selectedCourseId);
@@ -94,19 +124,31 @@ export default function Lessons() {
     setSubmitting(true);
     setError("");
     try {
-      await createLesson({
+      const payload = {
         course: selectedCourseId,
         title: form.title,
         description: form.description,
-        order: lessons.length,
         isFree: form.isFree,
         isPublished: form.isPublished,
-      });
-      setForm({ title: "", description: "", isFree: false, isPublished: false });
+      };
+
+      if (editingId) {
+        await updateLesson(editingId, payload);
+      } else {
+        await createLesson({
+          ...payload,
+          order: lessons.length,
+        });
+      }
+
+      resetForm();
       loadLessons(selectedCourseId);
       setActiveTab("view");
     } catch (err) {
-      setError(err.response?.data?.message || "Failed to create lesson");
+      setError(
+        err.response?.data?.message ||
+          `Failed to ${editingId ? "update" : "create"} lesson`
+      );
     } finally {
       setSubmitting(false);
     }
@@ -202,7 +244,7 @@ export default function Lessons() {
 
       {locationSelector}
 
-      <ViewUploadTabs activeTab={activeTab} onTabChange={setActiveTab} />
+      <ViewUploadTabs activeTab={activeTab} onTabChange={handleTabChange} />
 
       {activeTab === "view" && (
         <div className="rounded-xl border border-slate-200 bg-white shadow-sm">
@@ -222,7 +264,7 @@ export default function Lessons() {
               <p className="text-sm text-slate-500">No lessons yet.</p>
               <button
                 type="button"
-                onClick={() => setActiveTab("upload")}
+                onClick={() => handleTabChange("upload")}
                 className="mt-2 text-sm text-blue-600 hover:underline"
               >
                 Add your first lesson
@@ -260,6 +302,13 @@ export default function Lessons() {
                     </button>
                     <button
                       type="button"
+                      onClick={() => startEdit(lesson)}
+                      className="text-xs text-blue-600 hover:underline"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      type="button"
                       onClick={() => handleDelete(lesson._id)}
                       className="text-xs text-red-600 hover:underline"
                     >
@@ -275,9 +324,11 @@ export default function Lessons() {
 
       {activeTab === "upload" && (
         <form onSubmit={handleSubmit} className="max-w-2xl rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
-          <h3 className="font-semibold text-slate-900">Add Lesson</h3>
+          <h3 className="font-semibold text-slate-900">
+            {editingId ? "Edit Lesson" : "Add Lesson"}
+          </h3>
           <p className="mt-1 text-sm text-slate-500">
-            Add a lesson to {selectedCourse?.title || "selected course"}
+            {editingId ? "Update" : "Add"} a lesson in {selectedCourse?.title || "selected course"}
           </p>
 
           <div className="mt-4 space-y-4">
@@ -327,13 +378,33 @@ export default function Lessons() {
               </label>
             </div>
 
-            <button
-              type="submit"
-              disabled={!selectedCourseId || submitting}
-              className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60"
-            >
-              {submitting ? "Adding..." : "Add Lesson"}
-            </button>
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={!selectedCourseId || submitting}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-500 disabled:opacity-60"
+              >
+                {submitting
+                  ? editingId
+                    ? "Saving..."
+                    : "Adding..."
+                  : editingId
+                    ? "Update Lesson"
+                    : "Add Lesson"}
+              </button>
+              {editingId && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    resetForm();
+                    setActiveTab("view");
+                  }}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-sm font-medium text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+              )}
+            </div>
           </div>
         </form>
       )}

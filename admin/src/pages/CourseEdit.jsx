@@ -26,7 +26,7 @@ export default function CourseEdit() {
     category: "",
     level: "beginner",
     thumbnail: "",
-    pricing: { monthly: "", yearly: "", lifetime: "", currency: "USD" },
+    pricing: { monthly: "", yearly: "", lifetime: "", currency: "INR" },
     isPublished: false,
   });
 
@@ -48,7 +48,7 @@ export default function CourseEdit() {
             monthly: course.pricing?.monthly ?? "",
             yearly: course.pricing?.yearly ?? "",
             lifetime: course.pricing?.lifetime ?? "",
-            currency: course.pricing?.currency || "USD",
+            currency: course.pricing?.currency || "INR",
           },
           isPublished: course.isPublished,
         });
@@ -112,11 +112,11 @@ export default function CourseEdit() {
         </div>
       )}
 
-      <form onSubmit={handleSubmit} className="max-w-2xl space-y-6">
+      <form onSubmit={handleSubmit} className="w-full space-y-6">
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <h3 className="font-semibold text-slate-900">Basic Information</h3>
-          <div className="mt-4 space-y-4">
-            <div>
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="sm:col-span-2 lg:col-span-2">
               <label className="mb-1 block text-sm font-medium text-slate-700">Course Title</label>
               <input
                 type="text"
@@ -127,6 +127,32 @@ export default function CourseEdit() {
               />
             </div>
             <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Category</label>
+              <select
+                required
+                value={form.category}
+                onChange={(e) => updateForm("category", e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              >
+                <option value="">Select category</option>
+                {categories.map((cat) => (
+                  <option key={cat._id} value={cat._id}>{cat.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-sm font-medium text-slate-700">Level</label>
+              <select
+                value={form.level}
+                onChange={(e) => updateForm("level", e.target.value)}
+                className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+              >
+                <option value="beginner">Beginner</option>
+                <option value="intermediate">Intermediate</option>
+                <option value="advanced">Advanced</option>
+              </select>
+            </div>
+            <div className="sm:col-span-2 lg:col-span-4">
               <label className="mb-1 block text-sm font-medium text-slate-700">Description</label>
               <textarea
                 rows={4}
@@ -136,46 +162,30 @@ export default function CourseEdit() {
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
               />
             </div>
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Category</label>
-                <select
-                  required
-                  value={form.category}
-                  onChange={(e) => updateForm("category", e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                >
-                  <option value="">Select category</option>
-                  {categories.map((cat) => (
-                    <option key={cat._id} value={cat._id}>{cat.name}</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="mb-1 block text-sm font-medium text-slate-700">Level</label>
-                <select
-                  value={form.level}
-                  onChange={(e) => updateForm("level", e.target.value)}
-                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
-                >
-                  <option value="beginner">Beginner</option>
-                  <option value="intermediate">Intermediate</option>
-                  <option value="advanced">Advanced</option>
-                </select>
-              </div>
+            <div className="sm:col-span-2 lg:col-span-3">
+              <ImageUpload
+                folder="courses"
+                label="Course Thumbnail"
+                value={form.thumbnail}
+                onChange={(url) => updateForm("thumbnail", url)}
+              />
             </div>
-            <ImageUpload
-              folder="courses"
-              label="Course Thumbnail"
-              value={form.thumbnail}
-              onChange={(url) => updateForm("thumbnail", url)}
-            />
+            <div className="flex items-end pb-1">
+              <label className="flex items-center gap-2 text-sm text-slate-700">
+                <input
+                  type="checkbox"
+                  checked={form.isPublished}
+                  onChange={(e) => updateForm("isPublished", e.target.checked)}
+                />
+                Published
+              </label>
+            </div>
           </div>
         </div>
 
         <div className="rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <h3 className="font-semibold text-slate-900">Pricing</h3>
-          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div>
               <label className="mb-1 block text-sm font-medium text-slate-700">Currency</label>
               <select
@@ -183,10 +193,10 @@ export default function CourseEdit() {
                 onChange={(e) => updatePricing("currency", e.target.value)}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
               >
+                <option value="INR">INR</option>
                 <option value="USD">USD</option>
                 <option value="EUR">EUR</option>
                 <option value="GBP">GBP</option>
-                <option value="INR">INR</option>
               </select>
             </div>
             <div>
@@ -197,6 +207,7 @@ export default function CourseEdit() {
                 step="0.01"
                 value={form.pricing.monthly}
                 onChange={(e) => updatePricing("monthly", e.target.value)}
+                onWheel={(e) => e.currentTarget.blur()}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
               />
             </div>
@@ -208,6 +219,7 @@ export default function CourseEdit() {
                 step="0.01"
                 value={form.pricing.yearly}
                 onChange={(e) => updatePricing("yearly", e.target.value)}
+                onWheel={(e) => e.currentTarget.blur()}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
               />
             </div>
@@ -219,22 +231,14 @@ export default function CourseEdit() {
                 step="0.01"
                 value={form.pricing.lifetime}
                 onChange={(e) => updatePricing("lifetime", e.target.value)}
+                onWheel={(e) => e.currentTarget.blur()}
                 className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
               />
             </div>
           </div>
         </div>
 
-        <label className="flex items-center gap-2 text-sm text-slate-700">
-          <input
-            type="checkbox"
-            checked={form.isPublished}
-            onChange={(e) => updateForm("isPublished", e.target.checked)}
-          />
-          Published
-        </label>
-
-        <div className="flex gap-3">
+        <div className="flex justify-end gap-3">
           <button
             type="submit"
             disabled={submitting}

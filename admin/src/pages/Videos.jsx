@@ -242,7 +242,7 @@ export default function Videos() {
       )}
 
       {activeTab === "upload" && (
-        <div className="max-w-2xl rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <div className="w-full rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <h3 className="mb-4 font-semibold text-slate-900">Upload Video</h3>
           {lessonId ? (
             <VideoUploadPanel

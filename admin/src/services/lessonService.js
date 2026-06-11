@@ -15,6 +15,11 @@ export const createLesson = async (lessonData) => {
   return data.data;
 };
 
+export const updateLesson = async (id, lessonData) => {
+  const { data } = await api.put(`/api/lessons/${id}`, lessonData);
+  return data.data;
+};
+
 export const deleteLesson = async (id) => {
   const { data } = await api.delete(`/api/lessons/${id}`);
   return data;

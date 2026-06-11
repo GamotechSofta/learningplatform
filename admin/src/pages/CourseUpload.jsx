@@ -29,7 +29,7 @@ export default function CourseUpload() {
     category: "",
     level: "beginner",
     thumbnail: "",
-    pricing: { monthly: "", yearly: "", lifetime: "", currency: "USD" },
+    pricing: { monthly: "", yearly: "", lifetime: "", currency: "INR" },
     isPublished: false,
   });
 

@@ -5,6 +5,11 @@ export const getCourses = async (params = {}) => {
   return data;
 };
 
+export const getCoursesVideoCounts = async () => {
+  const { data } = await api.get("/api/courses/video-counts");
+  return data;
+};
+
 export const getCourseById = async (id) => {
   const { data } = await api.get(`/api/courses/${id}`);
   return data.data;

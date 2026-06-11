@@ -1,9 +1,9 @@
 export const mainNavItems = [
   { label: "Dashboard", path: "/dashboard", icon: "dashboard" },
+  { label: "Categories", path: "/categories", icon: "categories" },
   { label: "Courses", path: "/courses", icon: "courses" },
   { label: "Lessons", path: "/lessons", icon: "lessons" },
   { label: "Videos", path: "/videos", icon: "videos" },
-  { label: "Categories", path: "/categories", icon: "categories" },
   { label: "Instructors", path: "/instructors", icon: "instructors" },
   { label: "Students", path: "/students", icon: "students" },
   { label: "Orders", path: "/orders", icon: "orders" },

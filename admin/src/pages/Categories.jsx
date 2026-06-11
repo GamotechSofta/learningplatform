@@ -156,7 +156,7 @@ export default function Categories() {
       </form>
 
       {showForm && (
-        <form onSubmit={handleSubmit} className="mb-6 rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
+        <form onSubmit={handleSubmit} className="mb-6 w-full rounded-xl border border-slate-200 bg-white p-5 shadow-sm">
           <h3 className="font-semibold text-slate-900">
             {editingId ? "Edit Category" : "New Category"}
           </h3>
@@ -203,7 +203,7 @@ export default function Categories() {
       {loading ? (
         <p className="text-sm text-slate-500">Loading categories...</p>
       ) : (
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid w-full grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
           {categories.map((cat) => (
             <div key={cat._id} className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
               <div className="h-36 bg-slate-100">
@@ -219,15 +219,15 @@ export default function Categories() {
                   </div>
                 )}
               </div>
-              <div className="p-5">
+              <div className="p-4">
                 <div className="flex items-start justify-between gap-2">
-                  <div>
+                  <div className="min-w-0 flex-1">
                     <h3 className="font-semibold text-slate-900">{cat.name}</h3>
-                    <p className="mt-1 text-sm text-slate-500">
+                    <p className="mt-1 line-clamp-2 text-sm text-slate-500">
                       {cat.description || "No description"}
                     </p>
                   </div>
-                  <div className="flex shrink-0 gap-2">
+                  <div className="flex shrink-0 flex-col gap-1">
                     <button
                       type="button"
                       onClick={() => startEdit(cat)}
@@ -244,11 +244,11 @@ export default function Categories() {
                     </button>
                   </div>
                 </div>
-                <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                <div className="mt-3 flex items-center justify-between gap-2 text-xs text-slate-500">
                   <span className="rounded-full bg-blue-50 px-2.5 py-1 font-medium text-blue-700">
                     {getCoursesCount(cat)} {getCoursesCount(cat) === 1 ? "course" : "courses"}
                   </span>
-                  <span className="text-slate-400">{cat.slug}</span>
+                  <span className="truncate text-slate-400">{cat.slug}</span>
                 </div>
               </div>
             </div>

@@ -2,6 +2,7 @@ import express from "express";
 import {
   createCourse,
   getCourses,
+  getCoursesVideoCounts,
   getCourseById,
   getCourseBySlug,
   getCourseWithLessons,
@@ -14,6 +15,7 @@ import authorize from "../middleware/authorizeRoles.js";
 const router = express.Router();
 
 router.get("/", getCourses);
+router.get("/video-counts", getCoursesVideoCounts);
 router.get("/slug/:slug", getCourseBySlug);
 router.get("/:id/full", getCourseWithLessons);
 router.get("/:id", getCourseById);

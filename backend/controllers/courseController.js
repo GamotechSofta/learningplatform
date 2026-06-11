@@ -1,5 +1,6 @@
 import Course from "../models/course.js";
 import Category from "../models/category.js";
+import Video from "../models/video.js";
 import asyncHandler from "../middleware/asyncHandler.js";
 
 export const createCourse = asyncHandler(async (req, res) => {
@@ -16,6 +17,51 @@ export const createCourse = asyncHandler(async (req, res) => {
     .populate("category", "name slug");
 
   res.status(201).json({ success: true, data: populated });
+});
+
+export const getCoursesVideoCounts = asyncHandler(async (req, res) => {
+  const videoCounts = await Video.aggregate([
+    {
+      $lookup: {
+        from: "lessons",
+        localField: "lesson",
+        foreignField: "_id",
+        as: "lessonDoc",
+      },
+    },
+    { $unwind: "$lessonDoc" },
+    {
+      $group: {
+        _id: "$lessonDoc.course",
+        videosCount: { $sum: 1 },
+      },
+    },
+  ]);
+
+  const countMap = Object.fromEntries(
+    videoCounts.map((item) => [item._id.toString(), item.videosCount])
+  );
+
+  const courses = await Course.find()
+    .populate("category", "name slug")
+    .sort({ createdAt: -1 });
+
+  const data = courses.map((course) => ({
+    _id: course._id,
+    title: course.title,
+    category: course.category,
+    isPublished: course.isPublished,
+    videosCount: countMap[course._id.toString()] || 0,
+  }));
+
+  const totalVideos = data.reduce((sum, course) => sum + course.videosCount, 0);
+
+  res.json({
+    success: true,
+    count: data.length,
+    totalVideos,
+    data,
+  });
 });
 
 export const getCourses = asyncHandler(async (req, res) => {

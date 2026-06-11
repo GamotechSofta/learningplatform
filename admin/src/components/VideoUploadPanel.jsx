@@ -127,7 +127,7 @@ export default function VideoUploadPanel({ lessonId, order = 0, disabled = false
   const showProgress = upload.isActive || upload.status === "error";
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-3">
+    <form onSubmit={handleSubmit} className="w-full space-y-4">
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
           {error}
@@ -157,53 +157,76 @@ export default function VideoUploadPanel({ lessonId, order = 0, disabled = false
         </button>
       </div>
 
-      <input
-        type="text"
-        required
-        disabled={disabled}
-        placeholder="Video title"
-        value={form.title}
-        onChange={(e) => updateForm({ title: e.target.value })}
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50"
-      />
-
-      <textarea
-        rows={2}
-        disabled={disabled}
-        placeholder="Description (optional)"
-        value={form.description}
-        onChange={(e) => updateForm({ description: e.target.value })}
-        className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50"
-      />
-
-      {mode === "file" ? (
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Video File (up to 5GB)</label>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Video Title</label>
           <input
-            ref={fileInputRef}
-            type="file"
-            accept="video/*"
-            disabled={disabled || upload.isActive}
-            onChange={(e) => setFile(e.target.files?.[0] || null)}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-blue-50 file:px-3 file:py-1 file:text-sm file:text-blue-700 disabled:bg-slate-50"
+            type="text"
+            required
+            disabled={disabled}
+            placeholder="Video title"
+            value={form.title}
+            onChange={(e) => updateForm({ title: e.target.value })}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50"
           />
-          {file && !showProgress && (
-            <p className="mt-1 text-xs text-slate-500">
-              Selected: {file.name} ({formatBytes(file.size)})
-            </p>
-          )}
         </div>
-      ) : (
-        <input
-          type="url"
-          required
-          disabled={disabled}
-          placeholder="https://..."
-          value={form.videoUrl}
-          onChange={(e) => updateForm({ videoUrl: e.target.value })}
-          className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50"
-        />
-      )}
+        <div>
+          <label className="mb-1 block text-sm font-medium text-slate-700">Duration (minutes)</label>
+          <input
+            type="number"
+            min="0"
+            step="any"
+            inputMode="decimal"
+            disabled={disabled}
+            value={form.duration}
+            onChange={(e) => updateForm({ duration: e.target.value })}
+            onWheel={(e) => e.currentTarget.blur()}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50"
+          />
+        </div>
+        <div className="sm:col-span-2">
+          <label className="mb-1 block text-sm font-medium text-slate-700">Description</label>
+          <textarea
+            rows={2}
+            disabled={disabled}
+            placeholder="Description (optional)"
+            value={form.description}
+            onChange={(e) => updateForm({ description: e.target.value })}
+            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50"
+          />
+        </div>
+        {mode === "file" ? (
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-sm font-medium text-slate-700">Video File (up to 5GB)</label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="video/*"
+              disabled={disabled || upload.isActive}
+              onChange={(e) => setFile(e.target.files?.[0] || null)}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm file:mr-3 file:rounded file:border-0 file:bg-blue-50 file:px-3 file:py-1 file:text-sm file:text-blue-700 disabled:bg-slate-50"
+            />
+            {file && !showProgress && (
+              <p className="mt-1 text-xs text-slate-500">
+                Selected: {file.name} ({formatBytes(file.size)})
+              </p>
+            )}
+          </div>
+        ) : (
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-sm font-medium text-slate-700">Video URL</label>
+            <input
+              type="url"
+              required
+              disabled={disabled}
+              placeholder="https://..."
+              value={form.videoUrl}
+              onChange={(e) => updateForm({ videoUrl: e.target.value })}
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50"
+            />
+          </div>
+        )}
+      </div>
 
       {showProgress && (
         <div className="rounded-lg border border-slate-200 bg-white p-3">
@@ -279,7 +302,7 @@ export default function VideoUploadPanel({ lessonId, order = 0, disabled = false
         </div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <ImageUpload
           folder="videos"
           label="Thumbnail (optional)"
@@ -287,31 +310,18 @@ export default function VideoUploadPanel({ lessonId, order = 0, disabled = false
           value={form.thumbnail}
           onChange={(url, key) => updateForm({ thumbnail: url, thumbnailKey: key })}
         />
-        <div>
-          <label className="mb-1 block text-sm font-medium text-slate-700">Duration (minutes)</label>
-          <input
-            type="number"
-            min="0"
-            step="any"
-            inputMode="decimal"
-            disabled={disabled}
-            value={form.duration}
-            onChange={(e) => updateForm({ duration: e.target.value })}
-            onWheel={(e) => e.currentTarget.blur()}
-            className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm disabled:bg-slate-50"
-          />
+        <div className="flex items-end pb-1">
+          <label className="flex items-center gap-2 text-sm text-slate-700">
+            <input
+              type="checkbox"
+              disabled={disabled}
+              checked={form.isPublished}
+              onChange={(e) => updateForm({ isPublished: e.target.checked })}
+            />
+            Publish video
+          </label>
         </div>
       </div>
-
-      <label className="flex items-center gap-2 text-sm text-slate-700">
-        <input
-          type="checkbox"
-          disabled={disabled}
-          checked={form.isPublished}
-          onChange={(e) => updateForm({ isPublished: e.target.checked })}
-        />
-        Publish video
-      </label>
 
       <button
         type="submit"
