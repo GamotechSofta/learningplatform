@@ -1,6 +1,12 @@
+import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import User from "../models/user.js";
 import asyncHandler from "../middleware/asyncHandler.js";
+
+const generateToken = (user) =>
+  jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
+    expiresIn: "7d",
+  });
 
 export const registerUser = asyncHandler(async (req, res) => {
   const { name, email, password } = req.body;
@@ -20,6 +26,8 @@ export const registerUser = asyncHandler(async (req, res) => {
     role: "student",
   });
 
+  const token = generateToken(user);
+
   res.status(201).json({
     success: true,
     data: {
@@ -27,6 +35,7 @@ export const registerUser = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      token,
     },
   });
 });

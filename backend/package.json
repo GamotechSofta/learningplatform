@@ -12,6 +12,9 @@
     "seed:admin": "node scripts/seedAdmin.js",
     "seed:categories": "node scripts/seedCategories.js",
     "seed:capcut-videos": "node scripts/seedCapcutVideos.js",
+    "seed:s3": "node scripts/seedS3Content.js",
+    "seed:s3:ml": "node scripts/seedS3Content.js machine-learning",
+    "seed:s3:networking": "node scripts/seedS3Content.js computer-networking",
     "configure:s3-cors": "node scripts/configureS3Cors.js"
   },
   "dependencies": {

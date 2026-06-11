@@ -40,8 +40,9 @@ app.use("/api/upload", uploadRoutes);
 
 app.use(errorHandler);
 
-app.listen(process.env.PORT, () => {
-  console.log(`Server is running on port ${process.env.PORT}`);
+const port = process.env.PORT || 3000;
+app.listen(port, "0.0.0.0", () => {
+  console.log(`Server is running on http://0.0.0.0:${port}`);
 });
 
 export default app;

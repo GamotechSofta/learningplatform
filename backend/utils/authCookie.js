@@ -26,4 +26,14 @@ export const clearAuthCookie = (res) => {
   res.clearCookie(COOKIE_NAME, getCookieOptions());
 };
 
-export const getTokenFromRequest = (req) => req.cookies?.[COOKIE_NAME];
+export const getTokenFromRequest = (req) => {
+  const cookieToken = req.cookies?.[COOKIE_NAME];
+  if (cookieToken) return cookieToken;
+
+  const header = req.headers?.authorization;
+  if (header?.startsWith("Bearer ")) {
+    return header.slice(7).trim();
+  }
+
+  return null;
+};
