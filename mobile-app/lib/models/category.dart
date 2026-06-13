@@ -1,3 +1,5 @@
+import '../core/utils/course_playability.dart';
+import '../core/utils/media_url.dart';
 import 'course.dart';
 
 class Category {
@@ -24,19 +26,26 @@ class Category {
     final courses = coursesRaw is List
         ? coursesRaw
             .whereType<Map>()
-            .map((c) => Course.fromJson(Map<String, dynamic>.from(c)))
+            .map(
+              (c) => Course.fromJson(
+                Map<String, dynamic>.from(c),
+                includeAllPlayable: true,
+              ),
+            )
             .where((c) => c.isPublished)
             .toList()
         : <Course>[];
+
+    final listable = CoursePlayability.filterListable(courses);
 
     return Category(
       id: json['_id']?.toString() ?? '',
       name: json['name']?.toString() ?? 'Untitled',
       slug: json['slug']?.toString() ?? '',
       description: json['description']?.toString(),
-      thumbnail: json['thumbnail']?.toString(),
-      coursesCount: (json['coursesCount'] as num?)?.toInt() ?? courses.length,
-      courses: courses,
+      thumbnail: MediaUrl.resolve(json['thumbnail']?.toString()),
+      coursesCount: listable.length,
+      courses: listable,
     );
   }
 }

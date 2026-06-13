@@ -2,7 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../core/theme/app_colors.dart';
+import '../core/utils/api_errors.dart';
+import '../core/utils/post_auth_sync.dart';
 import '../providers/auth_provider.dart';
+import '../providers/learning_progress_provider.dart';
+import '../providers/notification_provider.dart';
+import '../providers/saved_courses_provider.dart';
+import '../providers/subscription_provider.dart';
+import '../widgets/auth/auth_screen_layout.dart';
+import '../widgets/auth/auth_text_field.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -17,6 +26,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _submitting = false;
   bool _obscure = true;
+  bool _rememberMe = false;
   String? _error;
 
   @override
@@ -35,18 +45,36 @@ class _LoginScreenState extends State<LoginScreen> {
     });
 
     try {
-      await context.read<AuthProvider>().login(
-            _emailController.text.trim(),
-            _passwordController.text,
-          );
+      final auth = context.read<AuthProvider>();
+      final subs = context.read<SubscriptionProvider>();
+      final progress = context.read<LearningProgressProvider>();
+      final notifications = context.read<NotificationProvider>();
+      final saved = context.read<SavedCoursesProvider>();
+      await auth.login(
+        _emailController.text.trim(),
+        _passwordController.text,
+      );
+
+      await syncUserDataAfterAuth(
+        auth: auth,
+        subs: subs,
+        progress: progress,
+        notifications: notifications,
+        saved: saved,
+      );
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Welcome back!')),
+          SnackBar(
+            content: Text(
+              'Welcome back, ${auth.user?.name.split(' ').first ?? 'Learner'}! 🎓',
+            ),
+          ),
         );
-        context.go('/');
+        context.go(auth.needsLearningTrack ? '/onboarding/learning-track' : '/');
       }
     } catch (error) {
-      setState(() => _error = error.toString());
+      setState(() => _error = ApiErrors.friendlyMessage(error));
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -54,97 +82,93 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        backgroundColor: const Color(0xFFF8FAFC),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_rounded),
-          onPressed: () => context.canPop() ? context.pop() : context.go('/'),
-        ),
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
+    return AuthScreenLayout(
+      title: 'Welcome ',
+      titleHighlight: 'Back!',
+      subtitle:
+          'Good to see you again. Jump back into your courses, track your progress, and keep moving forward.',
+      footerText: "Don't have an account? ",
+      footerAction: 'Sign Up',
+      onFooterTap: () => context.push('/register'),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            if (_error != null) ...[
               Container(
-                width: 64,
-                height: 64,
+                padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFDBEAFE),
-                  borderRadius: BorderRadius.circular(18),
+                  color: AppColors.error.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: AppColors.error.withValues(alpha: 0.35)),
                 ),
-                child: const Icon(Icons.lock_outline, color: Color(0xFF2563EB), size: 30),
+                child: Text(_error!, style: const TextStyle(color: AppColors.error, fontSize: 13)),
               ),
-              const SizedBox(height: 20),
-              const Text(
-                'Welcome back',
-                style: TextStyle(fontSize: 28, fontWeight: FontWeight.w900),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Login to continue learning on Vidyank.',
-                style: TextStyle(color: Colors.grey.shade600, fontSize: 15),
-              ),
-              const SizedBox(height: 28),
-              if (_error != null) ...[
-                Container(
-                  padding: const EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFFEF2F2),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: const Color(0xFFFECACA)),
-                  ),
-                  child: Text(_error!, style: const TextStyle(color: Color(0xFFB91C1C))),
-                ),
-                const SizedBox(height: 16),
-              ],
-              TextFormField(
-                controller: _emailController,
-                keyboardType: TextInputType.emailAddress,
-                decoration: const InputDecoration(
-                  labelText: 'Email',
-                  prefixIcon: Icon(Icons.email_outlined),
-                ),
-                validator: (value) =>
-                    value == null || value.trim().isEmpty ? 'Email is required' : null,
-              ),
-              const SizedBox(height: 14),
-              TextFormField(
-                controller: _passwordController,
-                obscureText: _obscure,
-                decoration: InputDecoration(
-                  labelText: 'Password',
-                  prefixIcon: const Icon(Icons.lock_outline),
-                  suffixIcon: IconButton(
-                    icon: Icon(_obscure ? Icons.visibility_off : Icons.visibility),
-                    onPressed: () => setState(() => _obscure = !_obscure),
-                  ),
-                ),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Password is required' : null,
-              ),
-              const SizedBox(height: 24),
-              FilledButton(
-                onPressed: _submitting ? null : _submit,
-                child: _submitting
-                    ? const SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                      )
-                    : const Text('Login'),
-              ),
-              const SizedBox(height: 12),
-              TextButton(
-                onPressed: () => context.push('/register'),
-                child: const Text("Don't have an account? Register"),
-              ),
+              const SizedBox(height: 16),
             ],
-          ),
+            AuthTextField(
+              controller: _emailController,
+              label: 'Email Address',
+              keyboardType: TextInputType.emailAddress,
+              highlightBorder: true,
+              validator: (value) =>
+                  value == null || value.trim().isEmpty ? 'Email is required' : null,
+            ),
+            const SizedBox(height: 18),
+            AuthTextField(
+              controller: _passwordController,
+              label: 'Password',
+              obscureText: _obscure,
+              suffixIcon: IconButton(
+                icon: Icon(
+                  _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                  color: AppColors.textSecondary,
+                ),
+                onPressed: () => setState(() => _obscure = !_obscure),
+              ),
+              validator: (value) =>
+                  value == null || value.isEmpty ? 'Password is required' : null,
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: Checkbox(
+                    value: _rememberMe,
+                    onChanged: (value) => setState(() => _rememberMe = value ?? false),
+                    activeColor: AppColors.authBlue,
+                    side: const BorderSide(color: AppColors.border),
+                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                const Text(
+                  'Remember Me',
+                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                ),
+                const Spacer(),
+                TextButton(
+                  onPressed: () {},
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.textSecondary,
+                    padding: EdgeInsets.zero,
+                    minimumSize: Size.zero,
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  child: const Text('Forgot Password?', style: TextStyle(fontSize: 13)),
+                ),
+              ],
+            ),
+            const SizedBox(height: 24),
+            AuthPrimaryButton(
+              label: 'Log in',
+              loading: _submitting,
+              onPressed: _submit,
+            ),
+          ],
         ),
       ),
     );

@@ -19,7 +19,10 @@ class Lesson {
   final bool isPublished;
   final List<VideoItem> videos;
 
-  factory Lesson.fromJson(Map<String, dynamic> json) {
+  factory Lesson.fromJson(
+    Map<String, dynamic> json, {
+    bool includeAllPlayable = false,
+  }) {
     final isFree = json['isFree'] == true;
     final videosRaw = json['videos'];
     final videos = <VideoItem>[];
@@ -33,7 +36,7 @@ class Lesson {
                 lessonIsFree: isFree,
               ),
             )
-            .where((v) => v.isPublished),
+            .where((v) => includeAllPlayable || v.isPublished),
       );
       videos.sort((a, b) => a.order.compareTo(b.order));
     }

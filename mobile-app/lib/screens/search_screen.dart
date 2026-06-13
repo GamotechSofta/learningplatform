@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/utils/course_list_utils.dart';
 import '../models/category.dart';
 import '../services/category_service.dart';
 import '../widgets/course_card.dart';
+import '../widgets/dismiss_focus_on_tap.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/error_view.dart';
 
@@ -34,7 +36,8 @@ class _SearchScreenState extends State<SearchScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
+    return DismissFocusOnTap(
+      child: Column(
       children: [
         Padding(
           padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
@@ -79,6 +82,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     final courses = categories
                         .expand((c) => c.courses)
                         .where((c) => c.isPublished)
+                        .where(CourseListUtils.hasPlayableVideos)
                         .toList();
 
                     if (courses.isEmpty) {
@@ -89,6 +93,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     }
 
                     return ListView.separated(
+                      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
                       padding: const EdgeInsets.fromLTRB(16, 0, 16, 24),
                       itemCount: courses.length,
                       separatorBuilder: (_, __) => const SizedBox(height: 14),
@@ -104,6 +109,7 @@ class _SearchScreenState extends State<SearchScreen> {
                 ),
         ),
       ],
+      ),
     );
   }
 }

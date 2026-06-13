@@ -15,9 +15,12 @@ dependencies:
   go_router: ^16.0.0
   cached_network_image: ^3.4.1
   video_player: ^2.10.0
+  video_thumbnail: ^0.5.6
+  path_provider: ^2.1.5
   chewie: ^1.12.1
   flutter_secure_storage: ^9.2.4
   intl: ^0.20.2
+  webview_flutter: ^4.13.0
 
 dev_dependencies:
   flutter_test:
@@ -26,3 +29,13 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - assets/images/logo.png
+    - assets/images/blureBanner.png
+    - assets/images/banners/
+    - assets/images/banners/physics_banner.webp
+    - assets/images/banners/courses_banner.webp
+    - assets/images/banners/it_courses_banner.webp
+    - assets/images/banners/skillcoursesIcon.png
+    - assets/images/banners/videoEditingIcon.webp
+    - assets/images/categories/

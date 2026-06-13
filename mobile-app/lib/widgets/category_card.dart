@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme/app_colors.dart';
 import '../models/category.dart';
 import 'thumbnail_image.dart';
 
@@ -48,7 +49,7 @@ class CategoryCard extends StatelessWidget {
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: const Color(0xFF64748B),
+                            color: AppColors.textSecondary,
                           ),
                     ),
                   ],

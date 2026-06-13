@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../core/theme/app_colors.dart';
+
 class HomeSearchBar extends StatelessWidget {
   const HomeSearchBar({super.key});
 
@@ -17,18 +19,18 @@ class HomeSearchBar extends StatelessWidget {
                 height: 52,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: const Color(0xFFE2E8F0)),
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.border),
                 ),
-                child: Row(
+                child: const Row(
                   children: [
-                    Icon(Icons.search, color: Colors.grey.shade500),
-                    const SizedBox(width: 10),
+                    Icon(Icons.search, color: AppColors.textSecondary),
+                    SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         'Search for courses, topics, instructors...',
-                        style: TextStyle(color: Colors.grey.shade500, fontSize: 14),
+                        style: TextStyle(color: AppColors.textSecondary, fontSize: 14),
                         overflow: TextOverflow.ellipsis,
                       ),
                     ),
@@ -42,11 +44,11 @@ class HomeSearchBar extends StatelessWidget {
             height: 52,
             width: 52,
             decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: const Color(0xFFE2E8F0)),
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.border),
             ),
-            child: const Icon(Icons.tune_rounded, color: Color(0xFF2563EB)),
+            child: const Icon(Icons.tune_rounded, color: AppColors.primary),
           ),
         ],
       ),

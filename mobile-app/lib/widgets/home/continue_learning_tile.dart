@@ -1,7 +1,8 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../models/course.dart';
+import '../course_side_thumbnail.dart';
 
 class ContinueLearningTile extends StatelessWidget {
   const ContinueLearningTile({
@@ -9,11 +10,17 @@ class ContinueLearningTile extends StatelessWidget {
     required this.course,
     required this.progress,
     required this.onResume,
+    this.watchedCount,
+    this.totalCount,
+    this.resumeLabel = 'Resume',
   });
 
   final Course course;
   final double progress;
   final VoidCallback onResume;
+  final int? watchedCount;
+  final int? totalCount;
+  final String resumeLabel;
 
   @override
   Widget build(BuildContext context) {
@@ -21,36 +28,25 @@ class ContinueLearningTile extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 20),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        color: AppColors.surface,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppColors.border),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.04),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
+            blurRadius: 10,
+            offset: const Offset(0, 3),
           ),
         ],
       ),
       child: Row(
         children: [
           ClipRRect(
-            borderRadius: BorderRadius.circular(14),
-            child: Container(
-              width: 64,
-              height: 64,
-              color: const Color(0xFF1E3A8A),
-              child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                  ? CachedNetworkImage(
-                      imageUrl: course.thumbnail!,
-                      fit: BoxFit.cover,
-                      errorWidget: (_, __, ___) => const Icon(
-                        Icons.play_circle_outline,
-                        color: Colors.white,
-                        size: 32,
-                      ),
-                    )
-                  : const Icon(Icons.play_circle_outline, color: Colors.white, size: 32),
+            borderRadius: BorderRadius.circular(10),
+            child: CourseSideThumbnail(
+              course: course,
+              width: 96,
+              height: 72,
             ),
           ),
           const SizedBox(width: 12),
@@ -65,26 +61,26 @@ class ContinueLearningTile extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: Color(0xFF0F172A),
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(99),
                   child: LinearProgressIndicator(
-                    value: progress,
+                    value: progress.clamp(0.0, 1.0),
                     minHeight: 6,
-                    backgroundColor: const Color(0xFFE2E8F0),
-                    color: const Color(0xFF22C55E),
+                    backgroundColor: AppColors.border,
+                    color: AppColors.accentGreen,
                   ),
                 ),
                 const SizedBox(height: 6),
                 Text(
-                  '${(progress * 100).round()}% Complete',
+                  _progressLabel(),
                   style: const TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF16A34A),
+                    color: AppColors.accentGreen,
                   ),
                 ),
               ],
@@ -94,13 +90,26 @@ class ContinueLearningTile extends StatelessWidget {
           FilledButton(
             onPressed: onResume,
             style: FilledButton.styleFrom(
+              backgroundColor: AppColors.primary,
               padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
               minimumSize: Size.zero,
             ),
-            child: const Text('Resume'),
+            child: Text(resumeLabel),
           ),
         ],
       ),
     );
+  }
+
+  String _progressLabel() {
+    if (totalCount != null && totalCount! > 0) {
+      final watched = watchedCount ?? (progress * totalCount!).round();
+      if (progress >= 1.0) return 'Completed • $watched of $totalCount videos';
+      return '${(progress * 100).round()}% Completed • $watched/$totalCount videos';
+    }
+
+    if (progress <= 0) return 'Not started yet';
+    if (progress >= 1.0) return 'Completed';
+    return '${(progress * 100).round()}% Completed';
   }
 }

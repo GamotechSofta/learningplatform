@@ -13,16 +13,19 @@ import courseRoutes from "./routes/courseRoutes.js";
 import lessonRoutes from "./routes/lessonRoutes.js";
 import videoRoutes from "./routes/videoRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
+import paymentRoutes from "./routes/paymentRoutes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 connectDB();
 
 const app = express();
+app.set("trust proxy", 1);
 
 app.use(corsMiddleware);
 app.options(/.*/, corsMiddleware);
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
 app.use("/uploads", express.static(path.join(__dirname, "uploads")));
 
@@ -37,6 +40,7 @@ app.use("/api/courses", courseRoutes);
 app.use("/api/lessons", lessonRoutes);
 app.use("/api/videos", videoRoutes);
 app.use("/api/upload", uploadRoutes);
+app.use("/api/payments", paymentRoutes);
 
 app.use(errorHandler);
 

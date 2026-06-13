@@ -74,6 +74,12 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    /** Student preference: drives mobile home recommendations. */
+    learningTrack: {
+      type: String,
+      enum: ["class_8_10", "class_11_12", "jee", "skills", "explore_all"],
+      default: null,
+    },
   },
   { timestamps: true }
 );

@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme/app_colors.dart';
+import '../navigation/main_shell_scope.dart';
 import '../services/category_service.dart';
 import '../services/course_service.dart';
 import '../services/subscription_service.dart';
-import 'certificates_screen.dart';
+import '../widgets/app_drawer.dart';
+import 'saved_courses_screen.dart';
 import 'courses_screen.dart';
 import 'home_screen.dart';
 import 'my_learning_screen.dart';
@@ -26,9 +29,35 @@ class MainShell extends StatefulWidget {
 }
 
 class _MainShellState extends State<MainShell> {
-  int _index = 0;
+  static const _tabCount = 5;
 
-  void _goToCourses() => setState(() => _index = 1);
+  int _index = 0;
+  PageController? _pageController;
+
+  PageController get _pages =>
+      _pageController ??= PageController(initialPage: _index);
+
+  @override
+  void dispose() {
+    _pageController?.dispose();
+    super.dispose();
+  }
+
+  void _selectTab(int index) {
+    if (index < 0 || index >= _tabCount) return;
+    if (index == _index) return;
+
+    setState(() => _index = index);
+    _pages.animateToPage(
+      index,
+      duration: const Duration(milliseconds: 280),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  void _onPageChanged(int index) {
+    if (_index != index) setState(() => _index = index);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -36,20 +65,39 @@ class _MainShellState extends State<MainShell> {
       HomeScreen(
         categoryService: widget.categoryService,
         courseService: widget.courseService,
-        subscriptionService: widget.subscriptionService,
-        onExploreCourses: _goToCourses,
+        onExploreCourses: () => _selectTab(1),
       ),
-      CoursesScreen(courseService: widget.courseService),
-      MyLearningScreen(subscriptionService: widget.subscriptionService),
-      const CertificatesScreen(),
+      CoursesScreen(
+        courseService: widget.courseService,
+        categoryService: widget.categoryService,
+      ),
+      MyLearningScreen(
+        subscriptionService: widget.subscriptionService,
+        courseService: widget.courseService,
+      ),
+      const SavedCoursesScreen(),
       const ProfileScreen(),
     ];
 
     return Scaffold(
-      body: IndexedStack(index: _index, children: pages),
+      drawer: AppDrawer(onSelectTab: _selectTab),
+      body: Builder(
+        builder: (scaffoldContext) {
+          return MainShellScope(
+            selectTab: _selectTab,
+            openDrawer: () => Scaffold.of(scaffoldContext).openDrawer(),
+            child: PageView(
+              controller: _pages,
+              onPageChanged: _onPageChanged,
+              physics: const PageScrollPhysics(),
+              children: pages,
+            ),
+          );
+        },
+      ),
       bottomNavigationBar: Container(
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.06),
@@ -60,7 +108,7 @@ class _MainShellState extends State<MainShell> {
         ),
         child: SafeArea(
           child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 6),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceAround,
               children: [
@@ -68,31 +116,31 @@ class _MainShellState extends State<MainShell> {
                   icon: Icons.home_rounded,
                   label: 'Home',
                   selected: _index == 0,
-                  onTap: () => setState(() => _index = 0),
+                  onTap: () => _selectTab(0),
                 ),
                 _NavItem(
                   icon: Icons.menu_book_rounded,
                   label: 'Courses',
                   selected: _index == 1,
-                  onTap: () => setState(() => _index = 1),
+                  onTap: () => _selectTab(1),
                 ),
                 _NavItem(
                   icon: Icons.play_lesson_rounded,
                   label: 'My Learning',
                   selected: _index == 2,
-                  onTap: () => setState(() => _index = 2),
+                  onTap: () => _selectTab(2),
                 ),
                 _NavItem(
-                  icon: Icons.workspace_premium_rounded,
-                  label: 'Certificates',
+                  icon: Icons.bookmark_rounded,
+                  label: 'Saved',
                   selected: _index == 3,
-                  onTap: () => setState(() => _index = 3),
+                  onTap: () => _selectTab(3),
                 ),
                 _NavItem(
                   icon: Icons.person_rounded,
                   label: 'Profile',
                   selected: _index == 4,
-                  onTap: () => setState(() => _index = 4),
+                  onTap: () => _selectTab(4),
                 ),
               ],
             ),
@@ -118,13 +166,13 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = selected ? const Color(0xFF2563EB) : const Color(0xFF94A3B8);
+    final color = selected ? AppColors.primary : AppColors.textSecondary;
 
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(12),
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 6),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -133,7 +181,7 @@ class _NavItem extends StatelessWidget {
             Text(
               label,
               style: TextStyle(
-                fontSize: 10,
+                fontSize: 9,
                 fontWeight: selected ? FontWeight.w700 : FontWeight.w500,
                 color: color,
               ),

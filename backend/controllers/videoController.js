@@ -7,9 +7,11 @@ import {
   completeMultipartUpload,
   abortMultipartUpload,
   deleteFromS3,
+  readObjectRange,
   UPLOAD_FOLDERS,
   MAX_VIDEO_BYTES,
 } from "../utils/s3.js";
+import { looksLikeValidVideo } from "../utils/videoIntegrity.js";
 
 // Only allow presigning/completing keys inside the videos/ prefix so a caller
 // cannot get a signed URL for an arbitrary object in the bucket.
@@ -89,6 +91,15 @@ export const completeVideoMultipartUpload = asyncHandler(async (req, res) => {
 
   const result = await completeMultipartUpload({ key, uploadId, parts });
 
+  const header = await readObjectRange(key, 0, 65535);
+  if (!looksLikeValidVideo(header)) {
+    await deleteFromS3(key);
+    res.status(400);
+    throw new Error(
+      "Uploaded file is not a valid video (corrupt or wrong format). Please re-upload the original MP4/WebM file."
+    );
+  }
+
   res.json({ success: true, data: result });
 });
 
@@ -144,6 +155,16 @@ export const createVideo = asyncHandler(async (req, res) => {
   if (!videoKey && !externalUrl) {
     res.status(400);
     throw new Error("videoKey (uploaded file) or externalUrl is required");
+  }
+
+  if (videoKey) {
+    const header = await readObjectRange(videoKey, 0, 65535);
+    if (!looksLikeValidVideo(header)) {
+      res.status(400);
+      throw new Error(
+        "videoKey points to a corrupt or invalid file on S3. Re-upload the video before saving."
+      );
+    }
   }
 
   const existingCount = await Video.countDocuments({ lesson: lesson._id });

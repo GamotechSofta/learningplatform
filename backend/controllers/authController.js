@@ -42,6 +42,7 @@ export const loginUser = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      learningTrack: user.learningTrack ?? null,
       token,
     },
   });
@@ -54,4 +55,29 @@ export const logoutUser = asyncHandler(async (req, res) => {
 
 export const getMe = asyncHandler(async (req, res) => {
   res.json({ success: true, data: req.user });
+});
+
+const LEARNING_TRACKS = ["class_8_10", "class_11_12", "jee", "skills", "explore_all"];
+
+export const updateMyLearningTrack = asyncHandler(async (req, res) => {
+  const { learningTrack } = req.body;
+
+  if (!LEARNING_TRACKS.includes(learningTrack)) {
+    res.status(400);
+    throw new Error("Invalid learning track");
+  }
+
+  req.user.learningTrack = learningTrack;
+  await req.user.save();
+
+  res.json({
+    success: true,
+    data: {
+      _id: req.user._id,
+      name: req.user.name,
+      email: req.user.email,
+      role: req.user.role,
+      learningTrack: req.user.learningTrack,
+    },
+  });
 });

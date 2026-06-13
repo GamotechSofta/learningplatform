@@ -1,30 +1,52 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../../core/constants/learning_tracks.dart';
+import '../../core/theme/app_colors.dart';
+import '../../navigation/main_shell_scope.dart';
 import '../../providers/auth_provider.dart';
+import '../notification_bell_button.dart';
 
 class HomeHeader extends StatelessWidget {
   const HomeHeader({super.key});
 
+  String _greeting() {
+    final hour = DateTime.now().hour;
+    if (hour < 12) return 'Good morning';
+    if (hour < 17) return 'Good afternoon';
+    return 'Good evening';
+  }
+
+  String _subtitle(AuthProvider auth) {
+    if (!auth.isAuthenticated) {
+      return 'Explore courses for boards, JEE & career skills';
+    }
+    final track = auth.user?.learningTrack;
+    if (track != null &&
+        track.isNotEmpty &&
+        track != LearningTracks.exploreAll) {
+      return 'Personalized for ${LearningTracks.label(track)}';
+    }
+    return 'Ready to pick up where you left off?';
+  }
+
   @override
   Widget build(BuildContext context) {
     final auth = context.watch<AuthProvider>();
+    final shell = MainShellScope.of(context);
     final name = auth.isAuthenticated ? auth.user!.name.split(' ').first : 'Learner';
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 12, 20, 0),
       child: Row(
         children: [
-          Builder(
-            builder: (ctx) => IconButton(
-            onPressed: () => Scaffold.of(ctx).openDrawer(),
-            icon: const Icon(Icons.menu_rounded, color: Color(0xFF0F172A)),
+          IconButton(
+            onPressed: shell.openDrawer,
+            icon: const Icon(Icons.menu_rounded, color: AppColors.textPrimary),
             style: IconButton.styleFrom(
-              backgroundColor: Colors.white,
-              side: const BorderSide(color: Color(0xFFE2E8F0)),
+              backgroundColor: AppColors.surface,
+              side: const BorderSide(color: AppColors.border),
             ),
-          ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -32,71 +54,38 @@ class HomeHeader extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Hello, $name 👋',
+                  '${_greeting()}, $name',
                   style: const TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.w800,
-                    color: Color(0xFF0F172A),
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  "Let's learn something new today!",
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.grey.shade600,
-                  ),
+                  _subtitle(auth),
+                  style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
                 ),
               ],
             ),
           ),
-          Stack(
-            clipBehavior: Clip.none,
-            children: [
-              IconButton(
-                onPressed: () {},
-                icon: const Icon(Icons.notifications_none_rounded),
-                style: IconButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  side: const BorderSide(color: Color(0xFFE2E8F0)),
-                ),
-              ),
-              const Positioned(
-                right: 10,
-                top: 8,
-                child: CircleAvatar(
-                  radius: 7,
-                  backgroundColor: Color(0xFFEF4444),
-                  child: Text(
-                    '3',
-                    style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700),
-                  ),
-                ),
-              ),
-            ],
-          ),
+          const NotificationBellButton(),
           const SizedBox(width: 8),
           GestureDetector(
-            onTap: () {
-              if (auth.isAuthenticated) {
-                // Profile tab is index 4 in MainShell — navigate via login for guests
-              } else {
-                context.push('/login');
-              }
-            },
+            onTap: () => shell.selectTab(4),
             child: CircleAvatar(
               radius: 22,
-              backgroundColor: const Color(0xFFDBEAFE),
+              backgroundColor: AppColors.primaryLight,
               child: auth.isAuthenticated
                   ? Text(
                       name.isNotEmpty ? name[0].toUpperCase() : '?',
                       style: const TextStyle(
-                        color: Color(0xFF2563EB),
+                        color: AppColors.primary,
                         fontWeight: FontWeight.w800,
                         fontSize: 18,
                       ),
                     )
-                  : const Icon(Icons.person_outline, color: Color(0xFF2563EB)),
+                  : const Icon(Icons.person_outline, color: AppColors.primary),
             ),
           ),
         ],

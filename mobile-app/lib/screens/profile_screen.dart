@@ -2,8 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../config/app_config.dart';
+import '../core/constants/learning_tracks.dart';
+import '../core/theme/app_colors.dart';
+import '../navigation/main_shell_scope.dart';
 import '../providers/auth_provider.dart';
+import '../providers/learning_progress_provider.dart';
+import '../providers/notification_provider.dart';
+import '../providers/saved_courses_provider.dart';
+import '../providers/subscription_provider.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -14,14 +20,14 @@ class ProfileScreen extends StatelessWidget {
 
     if (auth.loading) {
       return const Scaffold(
-        backgroundColor: Color(0xFFF8FAFC),
+        backgroundColor: AppColors.background,
         body: Center(child: CircularProgressIndicator()),
       );
     }
 
     if (!auth.isAuthenticated) {
       return Scaffold(
-        backgroundColor: const Color(0xFFF8FAFC),
+        backgroundColor: AppColors.background,
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(24),
@@ -32,21 +38,21 @@ class ProfileScreen extends StatelessWidget {
                   width: 88,
                   height: 88,
                   decoration: BoxDecoration(
-                    color: const Color(0xFFDBEAFE),
+                    color: AppColors.primaryLight,
                     borderRadius: BorderRadius.circular(24),
                   ),
-                  child: const Icon(Icons.person_outline, size: 44, color: Color(0xFF2563EB)),
+                  child: const Icon(Icons.person_outline, size: 44, color: AppColors.primary),
                 ),
                 const SizedBox(height: 20),
                 const Text(
                   'Welcome to Vidyank',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800, color: AppColors.textPrimary),
                 ),
                 const SizedBox(height: 8),
-                Text(
+                const Text(
                   'Sign in to track progress, enroll in courses, and earn certificates.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey.shade600, height: 1.5),
+                  style: TextStyle(color: AppColors.textSecondary, height: 1.5),
                 ),
                 const SizedBox(height: 28),
                 SizedBox(
@@ -75,23 +81,22 @@ class ProfileScreen extends StatelessWidget {
     final firstName = user.name.split(' ').first;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: AppColors.background,
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(20),
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
           children: [
-            const SizedBox(height: 8),
             Row(
               children: [
                 CircleAvatar(
-                  radius: 36,
-                  backgroundColor: const Color(0xFFDBEAFE),
+                  radius: 38,
+                  backgroundColor: AppColors.primaryLight,
                   child: Text(
                     firstName.isNotEmpty ? firstName[0].toUpperCase() : '?',
                     style: const TextStyle(
-                      fontSize: 28,
+                      fontSize: 30,
                       fontWeight: FontWeight.w800,
-                      color: Color(0xFF2563EB),
+                      color: AppColors.primary,
                     ),
                   ),
                 ),
@@ -105,28 +110,13 @@ class ProfileScreen extends StatelessWidget {
                         style: const TextStyle(
                           fontSize: 20,
                           fontWeight: FontWeight.w800,
+                          color: AppColors.textPrimary,
                         ),
                       ),
                       const SizedBox(height: 4),
                       Text(
                         user.email,
-                        style: TextStyle(color: Colors.grey.shade600),
-                      ),
-                      const SizedBox(height: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFEFF6FF),
-                          borderRadius: BorderRadius.circular(99),
-                        ),
-                        child: Text(
-                          user.role.toUpperCase(),
-                          style: const TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            color: Color(0xFF2563EB),
-                          ),
-                        ),
+                        style: const TextStyle(color: AppColors.textSecondary, fontSize: 14),
                       ),
                     ],
                   ),
@@ -134,37 +124,84 @@ class ProfileScreen extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 28),
-            _ProfileTile(
-              icon: Icons.person_outline,
-              title: 'Account',
-              subtitle: 'Manage your profile',
+            if (user.hasLearningTrack)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 12),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: AppColors.primaryLight,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.primary.withValues(alpha: 0.25)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.track_changes_rounded, color: AppColors.primary),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Learning goal: ${LearningTracks.label(user.learningTrack)}',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            _ProfileMenuItem(
+              icon: Icons.school_outlined,
+              title: 'Change learning goal',
+              onTap: () => context.push('/onboarding/learning-track'),
             ),
-            _ProfileTile(
+            _ProfileMenuItem(
+              icon: Icons.menu_book_rounded,
+              title: 'My Courses',
+              onTap: () => MainShellScope.of(context).selectTab(2),
+            ),
+            _ProfileMenuItem(
               icon: Icons.notifications_none_rounded,
               title: 'Notifications',
-              subtitle: 'Course updates and reminders',
+              onTap: () => context.push('/notifications'),
             ),
-            _ProfileTile(
-              icon: Icons.cloud_outlined,
-              title: 'API Server',
-              subtitle: AppConfig.apiBaseUrl,
+            _ProfileMenuItem(
+              icon: Icons.bookmark_rounded,
+              title: 'Saved Courses',
+              onTap: () => MainShellScope.of(context).selectTab(3),
             ),
-            const SizedBox(height: 20),
-            FilledButton.icon(
-              onPressed: () async {
+            _ProfileMenuItem(
+              icon: Icons.help_outline_rounded,
+              title: 'Help & Support',
+              onTap: () {},
+            ),
+            _ProfileMenuItem(
+              icon: Icons.settings_outlined,
+              title: 'Settings',
+              onTap: () {},
+            ),
+            const SizedBox(height: 12),
+            _ProfileMenuItem(
+              icon: Icons.logout_rounded,
+              title: 'Logout',
+              titleColor: AppColors.logoutRed,
+              iconColor: AppColors.logoutRed,
+              showChevron: false,
+              onTap: () async {
                 await auth.logout();
                 if (context.mounted) {
+                  context.read<SubscriptionProvider>().clear();
+                  context.read<LearningProgressProvider>().clear();
+                  context.read<SavedCoursesProvider>().clear();
+                  context.read<NotificationProvider>().clear();
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(content: Text('Logged out successfully')),
                   );
+                  context.go('/login');
                 }
               },
-              icon: const Icon(Icons.logout_rounded),
-              label: const Text('Logout'),
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFFFEE2E2),
-                foregroundColor: const Color(0xFFB91C1C),
-              ),
             ),
           ],
         ),
@@ -173,55 +210,57 @@ class ProfileScreen extends StatelessWidget {
   }
 }
 
-class _ProfileTile extends StatelessWidget {
-  const _ProfileTile({
+class _ProfileMenuItem extends StatelessWidget {
+  const _ProfileMenuItem({
     required this.icon,
     required this.title,
-    required this.subtitle,
+    required this.onTap,
+    this.titleColor,
+    this.iconColor,
+    this.showChevron = true,
   });
 
   final IconData icon;
   final String title;
-  final String subtitle;
+  final VoidCallback onTap;
+  final Color? titleColor;
+  final Color? iconColor;
+  final bool showChevron;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 10),
-      padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: const Color(0xFFEFF6FF),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Icon(icon, color: const Color(0xFF2563EB)),
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(12),
+        child: Container(
+          margin: const EdgeInsets.only(bottom: 8),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+          decoration: BoxDecoration(
+            color: AppColors.surface,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
+          child: Row(
+            children: [
+              Icon(icon, color: iconColor ?? AppColors.primary, size: 22),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Text(
                   title,
-                  style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 15),
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 15,
+                    color: titleColor ?? AppColors.textPrimary,
+                  ),
                 ),
-                const SizedBox(height: 2),
-                Text(
-                  subtitle,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
-                ),
-              ],
-            ),
+              ),
+              if (showChevron)
+                const Icon(Icons.chevron_right, color: AppColors.textSecondary, size: 20),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

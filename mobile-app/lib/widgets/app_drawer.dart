@@ -2,10 +2,18 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
+import '../core/theme/app_colors.dart';
 import '../providers/auth_provider.dart';
 
 class AppDrawer extends StatelessWidget {
-  const AppDrawer({super.key});
+  const AppDrawer({super.key, required this.onSelectTab});
+
+  final void Function(int index) onSelectTab;
+
+  void _closeAndSelect(BuildContext context, int tab) {
+    Navigator.pop(context);
+    onSelectTab(tab);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -26,13 +34,13 @@ class AppDrawer extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w900,
-                      color: Color(0xFF2563EB),
+                      color: AppColors.primary,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     auth.isAuthenticated ? auth.user!.email : 'Sign in to continue',
-                    style: TextStyle(color: Colors.grey.shade600),
+                    style: const TextStyle(color: AppColors.textSecondary),
                   ),
                 ],
               ),
@@ -41,41 +49,46 @@ class AppDrawer extends StatelessWidget {
             ListTile(
               leading: const Icon(Icons.home_outlined),
               title: const Text('Home'),
-              onTap: () {
-                Navigator.pop(context);
-                context.go('/');
-              },
+              onTap: () => _closeAndSelect(context, 0),
             ),
             ListTile(
               leading: const Icon(Icons.menu_book_outlined),
               title: const Text('Courses'),
-              onTap: () => Navigator.pop(context),
+              onTap: () => _closeAndSelect(context, 1),
             ),
+            ListTile(
+              leading: const Icon(Icons.play_lesson_outlined),
+              title: const Text('My Learning'),
+              onTap: () => _closeAndSelect(context, 2),
+            ),
+            ListTile(
+              leading: const Icon(Icons.bookmark_border_rounded),
+              title: const Text('Saved Courses'),
+              onTap: () => _closeAndSelect(context, 3),
+            ),
+            ListTile(
+              leading: const Icon(Icons.person_outline),
+              title: const Text('Profile'),
+              onTap: () => _closeAndSelect(context, 4),
+            ),
+            ListTile(
+              leading: const Icon(Icons.notifications_none_rounded),
+              title: const Text('Notifications'),
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/notifications');
+              },
+            ),
+            const Spacer(),
             if (auth.isAuthenticated) ...[
+              const Divider(height: 1),
               ListTile(
                 leading: const Icon(Icons.logout_rounded),
                 title: const Text('Logout'),
                 onTap: () async {
                   Navigator.pop(context);
                   await auth.logout();
-                  if (context.mounted) context.go('/');
-                },
-              ),
-            ] else ...[
-              ListTile(
-                leading: const Icon(Icons.login_rounded),
-                title: const Text('Login'),
-                onTap: () {
-                  Navigator.pop(context);
-                  context.push('/login');
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.person_add_outlined),
-                title: const Text('Register'),
-                onTap: () {
-                  Navigator.pop(context);
-                  context.push('/register');
+                  if (context.mounted) context.go('/login');
                 },
               ),
             ],

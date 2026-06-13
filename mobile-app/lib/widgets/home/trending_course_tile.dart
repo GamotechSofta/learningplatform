@@ -1,7 +1,9 @@
-import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
+import '../../core/theme/app_colors.dart';
 import '../../models/course.dart';
+import '../save_course_button.dart';
+import '../thumbnail_image.dart';
 
 class TrendingCourseTile extends StatelessWidget {
   const TrendingCourseTile({
@@ -23,9 +25,9 @@ class TrendingCourseTile extends StatelessWidget {
         width: 220,
         margin: const EdgeInsets.only(right: 14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: const Color(0xFFE2E8F0)),
+          border: Border.all(color: AppColors.border),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
@@ -40,27 +42,20 @@ class TrendingCourseTile extends StatelessWidget {
           children: [
             Stack(
               children: [
-                SizedBox(
+                ThumbnailImage(
+                  url: course.thumbnail,
+                  videoUrl: course.previewVideoUrl,
                   height: 110,
-                  width: double.infinity,
-                  child: course.thumbnail != null && course.thumbnail!.isNotEmpty
-                      ? CachedNetworkImage(
-                          imageUrl: course.thumbnail!,
-                          fit: BoxFit.cover,
-                          errorWidget: (_, __, ___) => _placeholder(),
-                        )
-                      : _placeholder(),
+                  borderRadius: 0,
+                  showMediaOverlay: true,
+                  icon: Icons.play_circle_outline,
                 ),
                 Positioned(
                   top: 10,
                   right: 10,
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    decoration: BoxDecoration(
-                      color: Colors.white.withValues(alpha: 0.9),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(Icons.bookmark_border, size: 18),
+                  child: SaveCourseButton(
+                    course: course,
+                    iconSize: 18,
                   ),
                 ),
               ],
@@ -77,30 +72,36 @@ class TrendingCourseTile extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: Color(0xFF0F172A),
+                      color: AppColors.textPrimary,
                       height: 1.3,
                     ),
                   ),
                   const SizedBox(height: 8),
                   Row(
                     children: [
-                      const Icon(Icons.star_rounded, size: 16, color: Color(0xFFF59E0B)),
-                      const SizedBox(width: 4),
-                      Text(
-                        '4.6',
-                        style: TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w600,
-                          color: Colors.grey.shade700,
+                      if (course.videoCount > 0) ...[
+                        const Icon(
+                          Icons.play_circle_outline,
+                          size: 15,
+                          color: AppColors.textSecondary,
                         ),
-                      ),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${course.videoCount} lessons',
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: AppColors.textSecondary,
+                          ),
+                        ),
+                      ],
                       const Spacer(),
                       Text(
                         price,
                         style: const TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
-                          color: Color(0xFF2563EB),
+                          color: AppColors.primary,
                         ),
                       ),
                     ],
@@ -110,19 +111,6 @@ class TrendingCourseTile extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _placeholder() {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [Color(0xFF3B82F6), Color(0xFF1D4ED8)],
-        ),
-      ),
-      child: const Center(
-        child: Icon(Icons.play_circle_outline, color: Colors.white, size: 40),
       ),
     );
   }

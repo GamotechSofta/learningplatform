@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/constants/category_visuals.dart';
+import '../../core/theme/app_colors.dart';
 import '../../models/category.dart';
 
 class TopCategoryTile extends StatelessWidget {
@@ -26,12 +27,35 @@ class TopCategoryTile extends StatelessWidget {
             Container(
               width: 72,
               height: 72,
+              clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: visual.background,
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: visual.color.withValues(alpha: 0.15)),
+                border: Border.all(color: AppColors.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.04),
+                    blurRadius: 6,
+                    offset: const Offset(0, 2),
+                  ),
+                ],
               ),
-              child: Icon(visual.icon, color: visual.color, size: 30),
+              child: visual.imageAsset != null
+                  ? Padding(
+                      padding: const EdgeInsets.all(6),
+                      child: Image.asset(
+                        visual.imageAsset!,
+                        width: double.infinity,
+                        height: double.infinity,
+                        fit: BoxFit.contain,
+                        errorBuilder: (_, __, ___) => Icon(
+                          visual.icon,
+                          color: AppColors.primary,
+                          size: 32,
+                        ),
+                      ),
+                    )
+                  : Icon(visual.icon, color: AppColors.primary, size: 32),
             ),
             const SizedBox(height: 10),
             Text(
@@ -42,7 +66,7 @@ class TopCategoryTile extends StatelessWidget {
               style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: Color(0xFF334155),
+                color: AppColors.textPrimary,
                 height: 1.2,
               ),
             ),

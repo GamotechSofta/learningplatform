@@ -2,6 +2,8 @@ import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import User from "../models/user.js";
 import asyncHandler from "../middleware/asyncHandler.js";
+import { attachFallbackThumbnails } from "../utils/courseThumbnail.js";
+import { setAuthCookie } from "../utils/authCookie.js";
 
 const generateToken = (user) =>
   jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
@@ -27,6 +29,7 @@ export const registerUser = asyncHandler(async (req, res) => {
   });
 
   const token = generateToken(user);
+  setAuthCookie(res, token);
 
   res.status(201).json({
     success: true,
@@ -35,6 +38,7 @@ export const registerUser = asyncHandler(async (req, res) => {
       name: user.name,
       email: user.email,
       role: user.role,
+      learningTrack: user.learningTrack ?? null,
       token,
     },
   });
@@ -101,6 +105,13 @@ export const deleteUser = asyncHandler(async (req, res) => {
   res.json({ success: true, message: "User removed" });
 });
 
+export const purchaseSubscription = asyncHandler(async (req, res) => {
+  res.status(400);
+  throw new Error(
+    "Direct purchase is disabled. Complete payment through PayU checkout."
+  );
+});
+
 export const addSubscription = asyncHandler(async (req, res) => {
   const user = await User.findById(req.params.id);
 
@@ -142,5 +153,28 @@ export const getUserSubscriptions = asyncHandler(async (req, res) => {
     throw new Error("User not found");
   }
 
-  res.json({ success: true, data: user.subscriptions });
+  const subscriptions = user.subscriptions.map((sub) =>
+    sub.toObject ? sub.toObject() : { ...sub }
+  );
+  const courses = subscriptions
+    .map((sub) => sub.course)
+    .filter((course) => course && course._id);
+
+  if (courses.length > 0) {
+    const withThumbnails = await attachFallbackThumbnails(courses);
+    const mediaByCourse = Object.fromEntries(
+      withThumbnails.map((course) => [course._id.toString(), course])
+    );
+
+    for (const sub of subscriptions) {
+      const courseId = sub.course?._id?.toString();
+      const media = courseId ? mediaByCourse[courseId] : null;
+      if (!media) continue;
+
+      if (media.thumbnail) sub.course.thumbnail = media.thumbnail;
+      if (media.previewVideoUrl) sub.course.previewVideoUrl = media.previewVideoUrl;
+    }
+  }
+
+  res.json({ success: true, data: subscriptions });
 });

@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/theme/app_colors.dart';
+import '../core/utils/course_list_utils.dart';
 import '../models/category.dart';
 import '../services/category_service.dart';
 import '../widgets/course_card.dart';
@@ -56,7 +58,10 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
           }
 
           final category = snapshot.data!;
-          final courses = category.courses.where((c) => c.isPublished).toList();
+          final courses = category.courses
+              .where((c) => c.isPublished)
+              .where(CourseListUtils.hasPlayableVideos)
+              .toList();
 
           return RefreshIndicator(
             onRefresh: () async => _reload(),
@@ -80,7 +85,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                   Text(
                     category.description!,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: const Color(0xFF64748B),
+                          color: AppColors.textSecondary,
                         ),
                   ),
                 ],

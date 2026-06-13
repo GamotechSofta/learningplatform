@@ -53,6 +53,11 @@ const videoSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
+    // Set false when S3 file fails integrity checks (corrupt / wrong format).
+    mediaValid: {
+      type: Boolean,
+      default: true,
+    },
   },
   { timestamps: true }
 );

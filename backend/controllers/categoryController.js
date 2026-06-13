@@ -1,6 +1,20 @@
 import Category from "../models/category.js";
 import Course from "../models/course.js";
 import asyncHandler from "../middleware/asyncHandler.js";
+import { resolveCourseContent } from "../utils/courseContentResolver.js";
+import { resolveMediaUrl } from "../utils/mediaUrl.js";
+import {
+  applyCourseThumbnailFallbacks,
+  attachFallbackThumbnails,
+  pickVideoThumbnail,
+  pickVideoUrl,
+} from "../utils/courseThumbnail.js";
+import {
+  courseDataHasVerifiedPlayableVideos,
+  filterCoursesWithPlayableMedia,
+  pruneUnverifiedVideosFromCourseData,
+} from "../utils/coursePlayability.js";
+import { isPaidCourse } from "../utils/courseAccess.js";
 
 export const createCategory = asyncHandler(async (req, res) => {
   const category = await Category.create(req.body);
@@ -16,7 +30,13 @@ export const getCategories = asyncHandler(async (req, res) => {
     .sort({ order: 1, name: 1 })
     .populate("coursesCount");
 
-  res.json({ success: true, count: categories.length, data: categories });
+  const data = categories.map((category) => {
+    const output = category.toObject();
+    output.thumbnail = resolveMediaUrl(output.thumbnail);
+    return output;
+  });
+
+  res.json({ success: true, count: data.length, data });
 });
 
 export const searchCategories = asyncHandler(async (req, res) => {
@@ -55,11 +75,19 @@ export const searchCategories = asyncHandler(async (req, res) => {
     .populate("coursesCount")
     .populate({
       path: "courses",
-      select: "title slug thumbnail level isPublished",
+      select: "title slug thumbnail level isPublished pricing",
       options: { sort: { createdAt: -1 } },
     });
 
-  res.json({ success: true, count: results.length, data: results });
+  const data = [];
+  for (const category of results) {
+    const categoryData = category.toObject();
+    const published = (categoryData.courses || []).filter((course) => course.isPublished);
+    categoryData.courses = await filterCoursesWithPlayableMedia(published);
+    data.push(categoryData);
+  }
+
+  res.json({ success: true, count: data.length, data });
 });
 
 export const getCategoryById = asyncHandler(async (req, res) => {
@@ -102,7 +130,12 @@ export const getCoursesByCategory = asyncHandler(async (req, res) => {
     .populate("category", "name slug")
     .sort({ createdAt: -1 });
 
-  res.json({ success: true, count: courses.length, data: courses });
+  const withThumbs = await attachFallbackThumbnails(courses);
+  const data =
+    req.query.published === "true"
+      ? await filterCoursesWithPlayableMedia(withThumbs)
+      : withThumbs;
+  res.json({ success: true, count: data.length, data });
 });
 
 export const getCategoryWithCourses = asyncHandler(async (req, res) => {
@@ -121,20 +154,12 @@ export const getCategoryWithCourses = asyncHandler(async (req, res) => {
 });
 
 export const getCategoryFull = asyncHandler(async (req, res) => {
+  const publishedOnly = req.query.published === "true";
+
   const category = await Category.findById(req.params.id).populate({
     path: "courses",
     options: { sort: { createdAt: -1 } },
-    populate: [
-      { path: "instructor", select: "name email" },
-      {
-        path: "lessons",
-        options: { sort: { order: 1 } },
-        populate: {
-          path: "videos",
-          options: { sort: { order: 1 } },
-        },
-      },
-    ],
+    populate: { path: "instructor", select: "name email" },
   });
 
   if (!category) {
@@ -142,7 +167,35 @@ export const getCategoryFull = asyncHandler(async (req, res) => {
     throw new Error("Category not found");
   }
 
-  res.json({ success: true, data: category });
+  const categoryData = category.toObject();
+  const courses = [];
+
+  for (const course of category.courses || []) {
+    const courseData = course.toObject();
+    courseData.lessons = await resolveCourseContent(course, { publishedOnly });
+    for (const lesson of courseData.lessons || []) {
+      lesson.videos = (lesson.videos || []).map((video) => ({
+        ...video,
+        videoUrl: pickVideoUrl(video),
+        thumbnail: pickVideoThumbnail(video),
+      }));
+    }
+
+    const enriched = applyCourseThumbnailFallbacks(courseData);
+    await pruneUnverifiedVideosFromCourseData(enriched);
+
+    const playable = await courseDataHasVerifiedPlayableVideos(enriched);
+    if (!publishedOnly || playable) {
+      enriched.isPaid = isPaidCourse(enriched);
+      enriched.hasPlayableVideos = playable;
+      if (playable) courses.push(enriched);
+    }
+  }
+
+  categoryData.thumbnail = resolveMediaUrl(categoryData.thumbnail);
+  categoryData.courses = courses;
+
+  res.json({ success: true, data: categoryData });
 });
 
 export const updateCategory = asyncHandler(async (req, res) => {

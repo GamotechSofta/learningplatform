@@ -1,30 +1,63 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
+import '../providers/auth_provider.dart';
 import '../screens/category_detail_screen.dart';
+import '../screens/certificate_detail_screen.dart';
+import '../screens/checkout_screen.dart';
 import '../screens/course_detail_screen.dart';
+import '../screens/learning_track_onboarding_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/main_shell.dart';
+import '../screens/notifications_screen.dart';
 import '../screens/register_screen.dart';
 import '../screens/search_page.dart';
 import '../screens/video_player_screen.dart';
 import '../services/category_service.dart';
 import '../services/course_service.dart';
+import '../services/payment_service.dart';
 import '../services/subscription_service.dart';
 
 class AppRouter {
   AppRouter({
+    required this.authProvider,
     required this.categoryService,
     required this.courseService,
     required this.subscriptionService,
+    required this.paymentService,
   });
 
+  final AuthProvider authProvider;
   final CategoryService categoryService;
   final CourseService courseService;
   final SubscriptionService subscriptionService;
+  final PaymentService paymentService;
+
+  static const _publicRoutes = {'/login', '/register'};
+  static const _onboardingRoute = '/onboarding/learning-track';
 
   late final GoRouter router = GoRouter(
     initialLocation: '/',
+    refreshListenable: authProvider,
+    redirect: (context, state) {
+      final location = state.matchedLocation;
+      final isPublic = _publicRoutes.contains(location);
+
+      if (!authProvider.isAuthenticated && !isPublic) {
+        return '/login';
+      }
+
+      if (authProvider.isAuthenticated && isPublic) {
+        return authProvider.needsLearningTrack ? _onboardingRoute : '/';
+      }
+
+      if (authProvider.isAuthenticated && authProvider.needsLearningTrack) {
+        if (location != _onboardingRoute) return _onboardingRoute;
+        return null;
+      }
+
+      return null;
+    },
     routes: [
       GoRoute(
         path: '/',
@@ -35,12 +68,20 @@ class AppRouter {
         ),
       ),
       GoRoute(
+        path: '/onboarding/learning-track',
+        builder: (context, state) => const LearningTrackOnboardingScreen(),
+      ),
+      GoRoute(
         path: '/login',
         builder: (context, state) => const LoginScreen(),
       ),
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
+      ),
+      GoRoute(
+        path: '/notifications',
+        builder: (context, state) => const NotificationsScreen(),
       ),
       GoRoute(
         path: '/search',
@@ -58,6 +99,20 @@ class AppRouter {
         builder: (context, state) => CourseDetailScreen(
           courseId: state.pathParameters['id']!,
           courseService: courseService,
+        ),
+      ),
+      GoRoute(
+        path: '/courses/:id/checkout',
+        builder: (context, state) => CheckoutScreen(
+          courseId: state.pathParameters['id']!,
+          courseService: courseService,
+          paymentService: paymentService,
+        ),
+      ),
+      GoRoute(
+        path: '/certificates/:id',
+        builder: (context, state) => CertificateDetailScreen(
+          certificateId: state.pathParameters['id']!,
         ),
       ),
       GoRoute(

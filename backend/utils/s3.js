@@ -2,6 +2,7 @@ import path from "path";
 import {
   S3Client,
   PutObjectCommand,
+  GetObjectCommand,
   DeleteObjectCommand,
   CreateMultipartUploadCommand,
   UploadPartCommand,
@@ -238,6 +239,30 @@ export const abortMultipartUpload = async ({ key, uploadId }) => {
       UploadId: uploadId,
     })
   );
+};
+
+/**
+ * Read a byte range from an S3 object (used to verify uploads).
+ */
+export const readObjectRange = async (key, start = 0, end = 65535) => {
+  if (!key || /^https?:\/\//i.test(key)) {
+    throw new Error("Invalid S3 key");
+  }
+
+  const bucket = getBucket();
+  const response = await getS3Client().send(
+    new GetObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Range: `bytes=${start}-${end}`,
+    })
+  );
+
+  const chunks = [];
+  for await (const chunk of response.Body) {
+    chunks.push(chunk);
+  }
+  return Buffer.concat(chunks);
 };
 
 /**
