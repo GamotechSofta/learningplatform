@@ -42,6 +42,77 @@ const SEED_PRESETS = {
     },
     defaultLesson: "Machine Learning",
   },
+  "big-data-analytics-hadoop": {
+    s3Prefix:
+      "videos/IT Courses/Big Data Analytics (Hadoop) /Big Data Analytics (Hadoop) leacture/",
+    category: {
+      name: "IT Courses",
+      slug: "it-courses",
+      description: "Information technology and software courses",
+      order: 20,
+    },
+    course: {
+      title: "Big Data Analytics (Hadoop)",
+      slug: "big-data-analytics-hadoop",
+      description:
+        "Big Data Analytics with Hadoop — concepts, MapReduce, Hive, Pig, and hands-on demos",
+      level: "intermediate",
+      pricing: { monthly: 0, yearly: 0, lifetime: 0, currency: "INR" },
+    },
+    defaultLesson: "Big Data Analytics (Hadoop)",
+  },
+  "cpp-programming": {
+    s3Prefix:
+      "videos/IT Courses/Big Data Analytics (Hadoop) /C++ Programming/C++ Playlist/",
+    category: {
+      name: "IT Courses",
+      slug: "it-courses",
+      description: "Information technology and software courses",
+      order: 20,
+    },
+    course: {
+      title: "C++ Programming",
+      slug: "cpp-programming",
+      description: "Complete C++ programming course — basics to advanced concepts",
+      level: "beginner",
+      pricing: { monthly: 0, yearly: 0, lifetime: 0, currency: "INR" },
+    },
+    defaultLesson: "C++",
+  },
+  "cloud-computing": {
+    s3Prefix: "videos/IT Courses/Cloud Computing/cloud/",
+    category: {
+      name: "IT Courses",
+      slug: "it-courses",
+      description: "Information technology and software courses",
+      order: 20,
+    },
+    course: {
+      title: "Cloud Computing",
+      slug: "cloud-computing",
+      description: "Cloud computing fundamentals, services, and practical concepts",
+      level: "intermediate",
+      pricing: { monthly: 0, yearly: 0, lifetime: 0, currency: "INR" },
+    },
+    defaultLesson: "Cloud Computing",
+  },
+  "html-css": {
+    s3Prefix: "videos/IT Courses/Web Designing Using HTML & CSS/htmlcss/",
+    category: {
+      name: "IT Courses",
+      slug: "it-courses",
+      description: "Information technology and software courses",
+      order: 20,
+    },
+    course: {
+      title: "HTML CSS",
+      slug: "html-css",
+      description: "Web designing with HTML and CSS — fundamentals to practical layouts",
+      level: "beginner",
+      pricing: { monthly: 0, yearly: 0, lifetime: 0, currency: "INR" },
+    },
+    defaultLesson: "HTML CSS",
+  },
   "computer-networking": {
     s3Prefix: "videos/IT Courses/Computer Networking/",
     category: {
@@ -51,13 +122,13 @@ const SEED_PRESETS = {
       order: 20,
     },
     course: {
-      title: "Computer Networking",
-      slug: "computer-networking",
+      title: "Computer Network",
+      slug: "computer-network",
       description: "Computer networking concepts, protocols, and practical tutorials",
       level: "intermediate",
       pricing: { monthly: 0, yearly: 0, lifetime: 0, currency: "INR" },
     },
-    defaultLesson: "Computer Networking Intermediate",
+    defaultLesson: "Computer networking",
   },
   "jee-mains-physics": {
     s3Prefix: "videos/JEE Mains/Physics/",
