@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/theme/themed_colors.dart';
 import '../core/utils/course_access.dart';
 import '../models/course.dart';
 import '../providers/auth_provider.dart';
@@ -13,6 +16,7 @@ import '../core/utils/notification_sync.dart';
 import '../screens/payu_checkout_screen.dart';
 import '../services/course_service.dart';
 import '../services/payment_service.dart';
+import '../widgets/checkout/checkout_trust_bar.dart';
 import '../widgets/error_view.dart';
 import '../widgets/thumbnail_image.dart';
 
@@ -79,6 +83,27 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     return plans;
   }
 
+  Future<void> _runPostPurchaseSetup({
+    required String userId,
+    required String courseId,
+    required SubscriptionProvider subs,
+    required NotificationProvider notifications,
+    required LearningProgressProvider progress,
+  }) async {
+    try {
+      await subs.refresh(userId, forceRefresh: true);
+      await widget.courseService.prepareCourseAfterPurchase(courseId);
+      await syncNotifications(
+        userId: userId,
+        notifications: notifications,
+        subs: subs,
+        progress: progress,
+      );
+    } catch (_) {
+      // Course page is already open; user can pull to refresh if needed.
+    }
+  }
+
   Future<void> _completePurchase(Course course) async {
     if (_selectedPlan == null || _submitting) return;
 
@@ -110,21 +135,23 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
             payment: payment,
             paymentService: widget.paymentService,
             onFinished: (status) async {
-              Navigator.of(context).pop();
+              if (context.mounted) {
+                Navigator.of(context).pop();
+              }
 
               if (status.isSuccess) {
-                await subs.refresh(auth.user!.id);
-                await syncNotifications(
-                  userId: auth.user!.id,
-                  notifications: notifications,
-                  subs: subs,
-                  progress: progress,
+                if (context.mounted) {
+                  context.go('/courses/${course.id}?thanks=1');
+                }
+                unawaited(
+                  _runPostPurchaseSetup(
+                    userId: auth.user!.id,
+                    courseId: course.id,
+                    subs: subs,
+                    notifications: notifications,
+                    progress: progress,
+                  ),
                 );
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(context).showSnackBar(
-                  SnackBar(content: Text('"${course.title}" unlocked successfully!')),
-                );
-                context.go('/courses/${course.id}');
               } else if (status.status == 'pending') {
                 if (!context.mounted) return;
                 ScaffoldMessenger.of(context).showSnackBar(
@@ -158,10 +185,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: c.background,
         title: const Text('Checkout'),
       ),
       body: FutureBuilder<Course>(
@@ -194,17 +222,17 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 child: Column(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    const Icon(Icons.check_circle_rounded, color: AppColors.accentGreen, size: 64),
-                    const SizedBox(height: 16),
-                    const Text(
-                      'Already purchased',
+                    Icon(Icons.check_circle_rounded, color: AppColors.accentGreen, size: 64),
+                    SizedBox(height: 16),
+                    Text(
+                      'You already have access',
                       style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
                     ),
-                    const SizedBox(height: 8),
+                    SizedBox(height: 8),
                     Text(
-                      'You already have full access to this course.',
+                      'This course is in your library. Open it to continue learning.',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(color: AppColors.textSecondary),
+                      style: TextStyle(color: c.textSecondary),
                     ),
                     const SizedBox(height: 20),
                     FilledButton(
@@ -236,22 +264,30 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   borderRadius: 0,
                 ),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Text(
                 course.title,
-                style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                style: TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w800,
+                  color: c.textPrimary,
+                ),
               ),
-              const SizedBox(height: 6),
+              SizedBox(height: 6),
               Text(
                 'Unlock all ${course.videoCount} videos in this course only.',
-                style: const TextStyle(color: AppColors.textSecondary, height: 1.4),
+                style: TextStyle(color: c.textSecondary, height: 1.4),
               ),
-              const SizedBox(height: 24),
-              const Text(
+              SizedBox(height: 24),
+              Text(
                 'Choose a plan',
-                style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                style: TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.w700,
+                  color: c.textPrimary,
+                ),
               ),
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               ...plans.map((plan) {
                 final isSelected = _selectedPlan == plan.id;
                 return Padding(
@@ -262,10 +298,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                     child: Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
-                        color: isSelected ? AppColors.primaryLight : AppColors.surface,
+                        color: isSelected ? c.primaryTint : c.surface,
                         borderRadius: BorderRadius.circular(16),
                         border: Border.all(
-                          color: isSelected ? AppColors.primary : AppColors.border,
+                          color: isSelected ? AppColors.primary : c.border,
                           width: isSelected ? 2 : 1,
                         ),
                       ),
@@ -277,7 +313,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                 : Icons.radio_button_off,
                             color: isSelected
                                 ? AppColors.primary
-                                : AppColors.textSecondary,
+                                : c.textSecondary,
                           ),
                           const SizedBox(width: 12),
                           Expanded(
@@ -288,9 +324,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                   children: [
                                     Text(
                                       plan.title,
-                                      style: const TextStyle(
+                                      style: TextStyle(
                                         fontWeight: FontWeight.w700,
                                         fontSize: 15,
+                                        color: c.textPrimary,
                                       ),
                                     ),
                                     if (plan.badge != null) ...[
@@ -306,7 +343,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                         ),
                                         child: Text(
                                           plan.badge!,
-                                          style: const TextStyle(
+                                          style: TextStyle(
                                             color: Colors.white,
                                             fontSize: 10,
                                             fontWeight: FontWeight.w700,
@@ -316,12 +353,12 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                     ],
                                   ],
                                 ),
-                                const SizedBox(height: 4),
+                                SizedBox(height: 4),
                                 Text(
                                   plan.subtitle,
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: AppColors.textSecondary,
+                                    color: c.textSecondary,
                                   ),
                                 ),
                               ],
@@ -329,7 +366,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                           ),
                           Text(
                             '${plan.currency} ${plan.price.toStringAsFixed(0)}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontWeight: FontWeight.w800,
                               color: AppColors.primary,
                             ),
@@ -340,13 +377,13 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ),
                 );
               }),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: c.surface,
                   borderRadius: BorderRadius.circular(16),
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: c.border),
                 ),
                 child: Column(
                   children: [
@@ -367,13 +404,15 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 16),
+              const CheckoutTrustBar(),
               const SizedBox(height: 20),
               FilledButton(
                 onPressed: _submitting || selected == null
                     ? null
                     : () => _completePurchase(course),
                 child: _submitting
-                    ? const SizedBox(
+                    ? SizedBox(
                         width: 22,
                         height: 22,
                         child: CircularProgressIndicator(
@@ -385,11 +424,11 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         'Pay with PayU • ${selected?.currency ?? ''} ${total.toStringAsFixed(0)}',
                       ),
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
               Text(
                 'Secure payment powered by PayU.',
                 textAlign: TextAlign.center,
-                style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                style: TextStyle(fontSize: 11, color: c.textSecondary),
               ),
             ],
           );
@@ -430,13 +469,14 @@ class _CheckoutRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       children: [
         Expanded(
           child: Text(
             label,
             style: TextStyle(
-              color: AppColors.textSecondary,
+              color: c.textSecondary,
               fontWeight: bold ? FontWeight.w700 : FontWeight.w500,
             ),
           ),
@@ -448,6 +488,7 @@ class _CheckoutRow extends StatelessWidget {
             style: TextStyle(
               fontWeight: bold ? FontWeight.w800 : FontWeight.w600,
               fontSize: bold ? 18 : 14,
+              color: c.textPrimary,
             ),
           ),
         ),

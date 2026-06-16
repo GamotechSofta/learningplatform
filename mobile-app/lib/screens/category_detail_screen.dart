@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../core/theme/app_colors.dart';
-import '../core/utils/course_list_utils.dart';
+import '../core/theme/themed_colors.dart';
+import '../core/utils/course_playability.dart';
 import '../models/category.dart';
 import '../services/category_service.dart';
 import '../widgets/course_card.dart';
@@ -35,19 +35,23 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
 
   void _reload() {
     setState(() {
-      _future = widget.categoryService.getCategoryFull(widget.categoryId);
+      _future = widget.categoryService.getCategoryFull(
+        widget.categoryId,
+        forceRefresh: true,
+      );
     });
   }
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      appBar: AppBar(title: const Text('Category')),
+      appBar: AppBar(title: Text('Category')),
       body: FutureBuilder<Category>(
         future: _future,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return Center(child: CircularProgressIndicator());
           }
 
           if (snapshot.hasError) {
@@ -59,8 +63,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
 
           final category = snapshot.data!;
           final courses = category.courses
-              .where((c) => c.isPublished)
-              .where(CourseListUtils.hasPlayableVideos)
+              .where(CoursePlayability.isListable)
               .toList();
 
           return RefreshIndicator(
@@ -73,7 +76,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                   aspectRatio: 16 / 8,
                   icon: Icons.category_outlined,
                 ),
-                const SizedBox(height: 16),
+                SizedBox(height: 16),
                 Text(
                   category.name,
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -81,11 +84,11 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
                       ),
                 ),
                 if (category.description != null && category.description!.isNotEmpty) ...[
-                  const SizedBox(height: 8),
+                  SizedBox(height: 8),
                   Text(
                     category.description!,
                     style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                          color: AppColors.textSecondary,
+                          color: c.textSecondary,
                         ),
                   ),
                 ],

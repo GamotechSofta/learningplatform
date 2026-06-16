@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/app_assets.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/themed_colors.dart';
 
 class HeroBanner extends StatefulWidget {
   const HeroBanner({super.key});
@@ -23,6 +24,7 @@ class _HeroBannerState extends State<HeroBanner> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 16, 20, 0),
       child: Column(
@@ -31,8 +33,8 @@ class _HeroBannerState extends State<HeroBanner> {
             borderRadius: BorderRadius.circular(16),
             child: DecoratedBox(
               decoration: BoxDecoration(
-                color: AppColors.surface,
-                border: Border.all(color: AppColors.border),
+                color: c.surface,
+                border: Border.all(color: c.border),
               ),
               child: AspectRatio(
                 aspectRatio: 16 / 9,
@@ -50,7 +52,7 @@ class _HeroBannerState extends State<HeroBanner> {
               ),
             ),
           ),
-          const SizedBox(height: 10),
+          SizedBox(height: 10),
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: List.generate(
@@ -61,7 +63,7 @@ class _HeroBannerState extends State<HeroBanner> {
                 width: index == _page ? 18 : 6,
                 height: 6,
                 decoration: BoxDecoration(
-                  color: index == _page ? AppColors.primary : AppColors.border,
+                  color: index == _page ? AppColors.primary : c.border,
                   borderRadius: BorderRadius.circular(99),
                 ),
               ),
@@ -131,11 +133,12 @@ class _BannerPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return ColoredBox(
-      color: AppColors.borderLight,
+      color: c.borderLight,
       child: Center(
         child: failed
-            ? const Icon(Icons.broken_image_outlined, color: AppColors.textSecondary)
+            ? Icon(Icons.broken_image_outlined, color: c.textSecondary)
             : const SizedBox(
                 width: 28,
                 height: 28,

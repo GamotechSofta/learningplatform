@@ -11,6 +11,7 @@ class NotificationService {
   final FlutterSecureStorage _storage;
 
   String _readKey(String userId) => 'notification_read_$userId';
+  String _installAtKey(String userId) => 'notification_install_at_$userId';
 
   Future<Set<String>> getReadIds(String userId) async {
     final raw = await _storage.read(key: _readKey(userId));
@@ -27,5 +28,16 @@ class NotificationService {
       key: _readKey(userId),
       value: jsonEncode(readIds.toList()),
     );
+  }
+
+  Future<DateTime> ensureInstallAt(String userId) async {
+    final key = _installAtKey(userId);
+    final raw = await _storage.read(key: key);
+    final parsed = DateTime.tryParse(raw ?? '');
+    if (parsed != null) return parsed;
+
+    final now = DateTime.now();
+    await _storage.write(key: key, value: now.toIso8601String());
+    return now;
   }
 }

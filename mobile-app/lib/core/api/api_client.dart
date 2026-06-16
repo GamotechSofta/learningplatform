@@ -65,6 +65,39 @@ class ApiClient {
     }
   }
 
+  Future<List<Map<String, dynamic>>> getRawList(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    try {
+      final response = await _dio.get(path, queryParameters: queryParameters);
+      final data = _extractEnvelopeData(response.data);
+      if (data is! List) return [];
+      return data
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList();
+    } on DioException catch (error) {
+      _unwrap(error);
+    }
+  }
+
+  Future<Map<String, dynamic>> getRawObject(
+    String path, {
+    Map<String, dynamic>? queryParameters,
+  }) async {
+    try {
+      final response = await _dio.get(path, queryParameters: queryParameters);
+      final data = _extractEnvelopeData(response.data);
+      if (data is! Map) {
+        throw ApiException('Invalid server response');
+      }
+      return Map<String, dynamic>.from(data);
+    } on DioException catch (error) {
+      _unwrap(error);
+    }
+  }
+
   Future<T> postData<T>(
     String path, {
     Map<String, dynamic>? body,
@@ -136,7 +169,7 @@ class ApiClient {
     throw error;
   }
 
-  T _parseEnvelope<T>(dynamic raw, T Function(dynamic json) parser) {
+  dynamic _extractEnvelopeData(dynamic raw) {
     if (raw is! Map) {
       throw ApiException('Invalid server response');
     }
@@ -147,7 +180,11 @@ class ApiClient {
       );
     }
 
-    return parser(raw['data']);
+    return raw['data'];
+  }
+
+  T _parseEnvelope<T>(dynamic raw, T Function(dynamic json) parser) {
+    return parser(_extractEnvelopeData(raw));
   }
 
   List<T> parseList<T>(

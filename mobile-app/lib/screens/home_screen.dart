@@ -4,18 +4,21 @@ import 'package:provider/provider.dart';
 
 import '../core/theme/app_colors.dart';
 import '../core/constants/learning_tracks.dart';
-import '../core/utils/api_errors.dart';
-import '../core/utils/course_access.dart';
 import '../core/utils/course_recommendations.dart';
 import '../models/category.dart';
 import '../models/course.dart';
+import '../providers/catalog_provider.dart';
 import '../providers/auth_provider.dart';
 import '../providers/learning_progress_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../services/category_service.dart';
 import '../services/course_service.dart';
 import '../navigation/main_shell_scope.dart';
-import '../widgets/home/continue_learning_tile.dart';
+import '../core/theme/themed_colors.dart';
+import '../core/utils/resume_learning_flow.dart';
+import '../widgets/home/continue_learning_hero.dart';
+import '../widgets/skeleton/home_skeleton.dart';
+import '../widgets/skeleton/skeleton_box.dart';
 import '../widgets/home/hero_banner.dart';
 import '../widgets/home/home_compact_course_row.dart';
 import '../widgets/home/home_feature_highlights.dart';
@@ -45,25 +48,44 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  List<Category> _categories = [];
-  List<Course> _courses = [];
-  bool _loading = true;
-  String? _error;
-
   @override
   void initState() {
     super.initState();
-    _load();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _refreshLearningData());
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      await context.read<CatalogProvider>().load();
+      if (!mounted) return;
+      await maybeShowResumePrompt(
+        context: context,
+        courseService: widget.courseService,
+      );
+    });
   }
 
-  Future<void> _refreshLearningData() async {
+  Future<void> _resumeCourse(Course course) async {
+    try {
+      await resumeCoursePlayback(
+        context: context,
+        course: course,
+        courseService: widget.courseService,
+      );
+    } catch (error) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(error.toString())),
+      );
+    }
+  }
+
+  Future<void> _refreshLearningData({bool forceRefresh = false}) async {
     final auth = context.read<AuthProvider>();
     if (!auth.isAuthenticated || auth.user == null) return;
 
     try {
       await Future.wait([
-        context.read<SubscriptionProvider>().refresh(auth.user!.id),
+        context.read<SubscriptionProvider>().refresh(
+              auth.user!.id,
+              forceRefresh: forceRefresh,
+            ),
         context.read<LearningProgressProvider>().loadForUser(auth.user!.id),
       ]);
       if (mounted) {
@@ -74,82 +96,25 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _load() async {
-    setState(() {
-      _loading = true;
-      _error = null;
-    });
-
-    try {
-      final results = await Future.wait([
-        widget.categoryService.getPublishedCategories(),
-        widget.courseService.getPublishedCourses(),
-      ]);
-
-      if (!mounted) return;
-      setState(() {
-        _categories = results[0] as List<Category>;
-        _courses = results[1] as List<Course>;
-        _loading = false;
-      });
-    } catch (error) {
-      if (!mounted) return;
-      setState(() {
-        _loading = false;
-        _error = ApiErrors.friendlyMessage(error);
-      });
-    }
-  }
-
   Future<void> _refreshAll() async {
     await Future.wait([
-      _load(),
-      _refreshLearningData(),
+      context.read<CatalogProvider>().load(forceRefresh: true),
+      _refreshLearningData(forceRefresh: true),
     ]);
-  }
-
-  Future<void> _resumeCourse(Course course) async {
-    try {
-      final subs = context.read<SubscriptionProvider>();
-      final progress = context.read<LearningProgressProvider>();
-      final subscriptionActive = subs.hasAccess(course.id);
-
-      final rawCourse = await widget.courseService.getCourseFull(course.id);
-      final isPurchased = CourseAccess.isCoursePurchased(
-        rawCourse,
-        subscriptionActive: subscriptionActive,
-      );
-      final fullCourse = CourseAccess.applyPlaybackLocks(
-        rawCourse,
-        subscriptionActive: subscriptionActive,
-      );
-      final next = progress.nextVideoToWatch(
-        fullCourse,
-        isPurchased: isPurchased,
-      );
-
-      if (!mounted) return;
-
-      if (next != null) {
-        context.push(
-          '/courses/${course.id}/lessons/${next.lessonId}/videos/${next.videoId}',
-        );
-      } else {
-        context.push('/courses/${course.id}');
-      }
-    } catch (error) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error.toString())),
-      );
-    }
   }
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final auth = context.watch<AuthProvider>();
+    final catalog = context.watch<CatalogProvider>();
     final subs = context.watch<SubscriptionProvider>();
     final progress = context.watch<LearningProgressProvider>();
+
+    final categories = catalog.categories;
+    final courses = catalog.courses;
+    final loading = catalog.loading;
+    final error = catalog.error;
 
     final purchasedCourses =
         subs.activeSubscriptions.map((sub) => sub.course).toList();
@@ -182,13 +147,13 @@ class _HomeScreenState extends State<HomeScreen> {
       if (watched == 0) return false;
       return progress.progressForCourse(course.id, course.videoCount) < 1.0;
     }).length;
-    final freeCourses = _courses
+    final freeCourses = courses
         .where((course) => !course.pricing.isPaid)
         .take(3)
         .toList();
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _refreshAll,
@@ -196,12 +161,26 @@ class _HomeScreenState extends State<HomeScreen> {
             padding: const EdgeInsets.only(bottom: 24),
             children: [
               const HomeHeader(),
-              const HomeSearchBar(),
-              const HeroBanner(),
-              HomeQuickActions(onBrowseCourses: widget.onExploreCourses),
-              if (_error != null) ...[
+              if (continueCourse != null) ...[
+                ContinueLearningHero(
+                  course: continueCourse,
+                  progress: courseProgress,
+                  watchedCount: watchedCount,
+                  totalCount: totalCount > 0 ? totalCount : null,
+                  onResume: () => _resumeCourse(continueCourse),
+                ),
+                const SizedBox(height: 20),
+              ] else if (loading && !catalog.loaded) ...[
+                const HomeSkeleton(),
+              ],
+              if (!loading || catalog.loaded) ...[
+                const HomeSearchBar(),
+                const HeroBanner(),
+                HomeQuickActions(onBrowseCourses: widget.onExploreCourses),
+              ],
+              if (error != null) ...[
                 const SizedBox(height: 12),
-                _ConnectionBanner(message: _error!, onRetry: _refreshAll),
+                _ConnectionBanner(message: error, onRetry: _refreshAll),
               ],
               const SizedBox(height: 24),
               SectionHeader(
@@ -211,9 +190,10 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 14),
               _buildCategoriesSection(
                 CourseRecommendations.categoriesForTrack(
-                  _categories,
+                  categories,
                   auth.user?.learningTrack,
                 ),
+                loading: loading,
               ),
               const SizedBox(height: 24),
               SectionHeader(
@@ -224,9 +204,13 @@ class _HomeScreenState extends State<HomeScreen> {
                 _recommendedSectionSubtitle(auth.user?.learningTrack) ?? '',
               ),
               const SizedBox(height: 10),
-              _buildCoursesSection(auth.user?.learningTrack),
+              _buildCoursesSection(
+                courses,
+                auth.user?.learningTrack,
+                loading: loading,
+              ),
               if (auth.isAuthenticated) ...[
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
                 HomeLearningSnapshot(
                   videosWatched: videosWatched,
                   coursesInProgress: coursesInProgress,
@@ -235,33 +219,17 @@ class _HomeScreenState extends State<HomeScreen> {
                   onOpenLearning: () => MainShellScope.of(context).selectTab(2),
                 ),
               ],
-              if (continueCourse != null) ...[
-                const SizedBox(height: 24),
-                SectionHeader(
-                  title: 'Continue Learning',
-                  onSeeAll: () => MainShellScope.of(context).selectTab(2),
-                ),
-                const SizedBox(height: 14),
-                ContinueLearningTile(
-                  course: continueCourse,
-                  progress: courseProgress,
-                  watchedCount: watchedCount,
-                  totalCount: totalCount > 0 ? totalCount : null,
-                  resumeLabel: watchedCount > 0 ? 'Resume' : 'Start',
-                  onResume: () => _resumeCourse(continueCourse),
-                ),
-              ],
               if (freeCourses.isNotEmpty) ...[
-                const SizedBox(height: 24),
+                SizedBox(height: 24),
                 const SectionHeader(title: 'Free to Start'),
-                const SizedBox(height: 6),
+                SizedBox(height: 6),
                 Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: Text(
                     'Try these courses at no cost — no payment needed to begin.',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 13,
-                      color: AppColors.textSecondary,
+                      color: c.textSecondary,
                     ),
                   ),
                 ),
@@ -270,7 +238,10 @@ class _HomeScreenState extends State<HomeScreen> {
                   (course) => HomeCompactCourseRow(
                     course: course,
                     badge: 'Free',
-                    onTap: () => context.push('/courses/${course.id}'),
+                    onTap: () {
+                      context.read<CatalogProvider>().prefetchCourseDetail(course.id);
+                      context.push('/courses/${course.id}');
+                    },
                   ),
                 ),
               ],
@@ -283,11 +254,14 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
-  Widget _buildCategoriesSection(List<Category> categories) {
-    if (_loading && categories.isEmpty) {
+  Widget _buildCategoriesSection(
+    List<Category> categories, {
+    required bool loading,
+  }) {
+    if (loading && categories.isEmpty) {
       return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24),
-        child: Center(child: CircularProgressIndicator()),
+        padding: EdgeInsets.symmetric(horizontal: 20),
+        child: SkeletonBox(width: double.infinity, height: 110, borderRadius: 16),
       );
     }
 
@@ -333,18 +307,19 @@ class _HomeScreenState extends State<HomeScreen> {
     return 'Courses students are watching right now';
   }
 
-  Widget _buildCoursesSection(String? learningTrack) {
+  Widget _buildCoursesSection(
+    List<Course> courses,
+    String? learningTrack, {
+    required bool loading,
+  }) {
     final recommended = CourseRecommendations.forTrack(
-      courses: _courses,
+      courses: courses,
       learningTrack: learningTrack,
       limit: 6,
     );
 
-    if (_loading && recommended.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.symmetric(vertical: 24),
-        child: Center(child: CircularProgressIndicator()),
-      );
+    if (loading && recommended.isEmpty) {
+      return const HomeSkeleton();
     }
 
     if (recommended.isEmpty) {
@@ -356,14 +331,18 @@ class _HomeScreenState extends State<HomeScreen> {
       showRank: learningTrack != null &&
           learningTrack.isNotEmpty &&
           learningTrack != LearningTracks.exploreAll,
-      onCourseTap: (course) => context.push('/courses/${course.id}'),
+      onCourseTap: (course) {
+        context.read<CatalogProvider>().prefetchCourseDetail(course.id);
+        context.push('/courses/${course.id}');
+      },
     );
   }
 
   Widget _emptyHint(String text) {
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
-      child: Text(text, style: const TextStyle(color: AppColors.textSecondary)),
+      child: Text(text, style: TextStyle(color: c.textSecondary)),
     );
   }
 }
@@ -376,6 +355,7 @@ class _ConnectionBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Container(
@@ -388,7 +368,7 @@ class _ConnectionBanner extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
                 Icon(Icons.wifi_off_rounded, color: AppColors.error, size: 20),
                 SizedBox(width: 8),
@@ -401,10 +381,10 @@ class _ConnectionBanner extends StatelessWidget {
                 ),
               ],
             ),
-            const SizedBox(height: 6),
+            SizedBox(height: 6),
             Text(
               message,
-              style: const TextStyle(fontSize: 12, color: AppColors.textSecondary),
+              style: TextStyle(fontSize: 12, color: c.textSecondary),
             ),
             const SizedBox(height: 4),
             const SizedBox(height: 10),

@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
-import '../../models/course.dart';
+import '../../core/theme/themed_colors.dart';
 
 class VideoPlayerInfoPanel extends StatelessWidget {
   const VideoPlayerInfoPanel({
     super.key,
-    required this.course,
     required this.videoTitle,
     required this.lessonTitle,
     required this.videoDurationSeconds,
     this.isWatched = false,
   });
 
-  final Course course;
   final String videoTitle;
   final String lessonTitle;
   final int videoDurationSeconds;
@@ -21,6 +19,7 @@ class VideoPlayerInfoPanel extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 20, 20, 8),
       child: Column(
@@ -28,10 +27,10 @@ class VideoPlayerInfoPanel extends StatelessWidget {
         children: [
           Text(
             videoTitle,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
+              color: c.textPrimary,
               height: 1.3,
             ),
           ),
@@ -57,17 +56,6 @@ class VideoPlayerInfoPanel extends StatelessWidget {
                 ),
             ],
           ),
-          const SizedBox(height: 16),
-          Text(
-            course.title,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
-            ),
-          ),
         ],
       ),
     );
@@ -87,15 +75,16 @@ class _MetaChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
-        color: highlight ? AppColors.primaryLight : AppColors.background,
+        color: highlight ? c.primaryTint : c.background,
         borderRadius: BorderRadius.circular(99),
         border: Border.all(
           color: highlight
               ? AppColors.primary.withValues(alpha: 0.25)
-              : AppColors.border,
+              : c.border,
         ),
       ),
       child: Row(
@@ -104,9 +93,9 @@ class _MetaChip extends StatelessWidget {
           Icon(
             icon,
             size: 14,
-            color: highlight ? AppColors.primary : AppColors.textSecondary,
+            color: highlight ? AppColors.primary : c.textSecondary,
           ),
-          const SizedBox(width: 5),
+          SizedBox(width: 5),
           Flexible(
             child: Text(
               label,
@@ -115,7 +104,7 @@ class _MetaChip extends StatelessWidget {
               style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: highlight ? AppColors.primary : AppColors.textSecondary,
+                color: highlight ? AppColors.primary : c.textSecondary,
               ),
             ),
           ),

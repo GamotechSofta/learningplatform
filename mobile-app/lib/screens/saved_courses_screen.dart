@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../core/theme/app_colors.dart';
+import '../core/theme/themed_colors.dart';
 import '../providers/auth_provider.dart';
 import '../providers/saved_courses_provider.dart';
 import '../widgets/course_card.dart';
@@ -13,12 +13,13 @@ class SavedCoursesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final auth = context.watch<AuthProvider>();
     final saved = context.watch<SavedCoursesProvider>();
 
     if (!auth.isAuthenticated) {
-      return const Scaffold(
-        backgroundColor: AppColors.background,
+      return Scaffold(
+        backgroundColor: c.background,
         body: SafeArea(
           child: EmptyState(
             title: 'Sign in to view saved courses',
@@ -32,7 +33,7 @@ class SavedCoursesScreen extends StatelessWidget {
     final courses = saved.courses;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: SafeArea(
         child: courses.isEmpty
             ? const EmptyState(
@@ -43,18 +44,18 @@ class SavedCoursesScreen extends StatelessWidget {
             : ListView(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
                 children: [
-                  const Text(
+                  Text(
                     'Saved Courses',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
+                      color: c.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  SizedBox(height: 6),
                   Text(
                     '${courses.length} saved',
-                    style: const TextStyle(color: AppColors.textSecondary),
+                    style: TextStyle(color: c.textSecondary),
                   ),
                   const SizedBox(height: 20),
                   ...courses.map(

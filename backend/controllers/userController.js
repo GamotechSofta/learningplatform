@@ -3,6 +3,7 @@ import bcrypt from "bcryptjs";
 import User from "../models/user.js";
 import asyncHandler from "../middleware/asyncHandler.js";
 import { attachFallbackThumbnails } from "../utils/courseThumbnail.js";
+import { attachVideoCounts } from "../utils/courseVideoCounts.js";
 import { setAuthCookie } from "../utils/authCookie.js";
 
 const generateToken = (user) =>
@@ -162,8 +163,9 @@ export const getUserSubscriptions = asyncHandler(async (req, res) => {
 
   if (courses.length > 0) {
     const withThumbnails = await attachFallbackThumbnails(courses);
+    const withCounts = await attachVideoCounts(withThumbnails);
     const mediaByCourse = Object.fromEntries(
-      withThumbnails.map((course) => [course._id.toString(), course])
+      withCounts.map((course) => [course._id.toString(), course])
     );
 
     for (const sub of subscriptions) {
@@ -173,6 +175,7 @@ export const getUserSubscriptions = asyncHandler(async (req, res) => {
 
       if (media.thumbnail) sub.course.thumbnail = media.thumbnail;
       if (media.previewVideoUrl) sub.course.previewVideoUrl = media.previewVideoUrl;
+      if (media.videoCount != null) sub.course.videoCount = media.videoCount;
     }
   }
 

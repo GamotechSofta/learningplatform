@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/themed_colors.dart';
 
 class SectionHeader extends StatelessWidget {
   const SectionHeader({
@@ -14,6 +15,7 @@ class SectionHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Row(
@@ -21,10 +23,10 @@ class SectionHeader extends StatelessWidget {
           Expanded(
             child: Text(
               title,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 18,
                 fontWeight: FontWeight.w800,
-                color: AppColors.textPrimary,
+                color: c.textPrimary,
               ),
             ),
           ),
@@ -58,15 +60,16 @@ class SectionSubtitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (text.isEmpty) return const SizedBox.shrink();
+    final c = context.colors;
+    if (text.isEmpty) return SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 6, 20, 0),
       child: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 13,
-          color: AppColors.textSecondary,
+          color: c.textSecondary,
           height: 1.3,
         ),
       ),

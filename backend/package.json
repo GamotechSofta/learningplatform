@@ -21,6 +21,7 @@
     "fix:thumbnails": "node scripts/fixThumbnails.js",
     "audit:videos": "node scripts/auditVideoIntegrity.js",
     "audit:videos:apply": "node scripts/auditVideoIntegrity.js --apply",
+    "transcode:videos": "node scripts/transcodeVideos.js --all",
     "fix:paid-lessons": "node scripts/fixPaidLessonFlags.js"
   },
   "dependencies": {

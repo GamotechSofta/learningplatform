@@ -3,13 +3,16 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/theme/themed_colors.dart';
 import '../core/utils/api_errors.dart';
 import '../core/utils/post_auth_sync.dart';
+import '../core/utils/resume_learning_flow.dart';
 import '../providers/auth_provider.dart';
 import '../providers/learning_progress_provider.dart';
 import '../providers/notification_provider.dart';
 import '../providers/saved_courses_provider.dart';
 import '../providers/subscription_provider.dart';
+import '../providers/video_engagement_provider.dart';
 import '../widgets/auth/auth_screen_layout.dart';
 import '../widgets/auth/auth_text_field.dart';
 
@@ -50,6 +53,7 @@ class _LoginScreenState extends State<LoginScreen> {
       final progress = context.read<LearningProgressProvider>();
       final notifications = context.read<NotificationProvider>();
       final saved = context.read<SavedCoursesProvider>();
+      final engagement = context.read<VideoEngagementProvider>();
       await auth.login(
         _emailController.text.trim(),
         _passwordController.text,
@@ -61,7 +65,15 @@ class _LoginScreenState extends State<LoginScreen> {
         progress: progress,
         notifications: notifications,
         saved: saved,
+        engagement: engagement,
       );
+
+      final continueCourse = progress.pickContinueCourse(
+        subs.activeSubscriptions.map((sub) => sub.course).toList(),
+      );
+      if (continueCourse != null) {
+        ResumePrompt.markPending();
+      }
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -82,6 +94,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return AuthScreenLayout(
       title: 'Welcome ',
       titleHighlight: 'Back!',
@@ -105,7 +118,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 ),
                 child: Text(_error!, style: const TextStyle(color: AppColors.error, fontSize: 13)),
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: 16),
             ],
             AuthTextField(
               controller: _emailController,
@@ -115,7 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
               validator: (value) =>
                   value == null || value.trim().isEmpty ? 'Email is required' : null,
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             AuthTextField(
               controller: _passwordController,
               label: 'Password',
@@ -123,14 +136,14 @@ class _LoginScreenState extends State<LoginScreen> {
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                  color: AppColors.textSecondary,
+                  color: c.textSecondary,
                 ),
                 onPressed: () => setState(() => _obscure = !_obscure),
               ),
               validator: (value) =>
                   value == null || value.isEmpty ? 'Password is required' : null,
             ),
-            const SizedBox(height: 14),
+            SizedBox(height: 14),
             Row(
               children: [
                 SizedBox(
@@ -140,20 +153,20 @@ class _LoginScreenState extends State<LoginScreen> {
                     value: _rememberMe,
                     onChanged: (value) => setState(() => _rememberMe = value ?? false),
                     activeColor: AppColors.authBlue,
-                    side: const BorderSide(color: AppColors.border),
+                    side: BorderSide(color: c.border),
                     materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
                   ),
                 ),
-                const SizedBox(width: 8),
-                const Text(
+                SizedBox(width: 8),
+                Text(
                   'Remember Me',
-                  style: TextStyle(fontSize: 13, color: AppColors.textSecondary),
+                  style: TextStyle(fontSize: 13, color: c.textSecondary),
                 ),
                 const Spacer(),
                 TextButton(
                   onPressed: () {},
                   style: TextButton.styleFrom(
-                    foregroundColor: AppColors.textSecondary,
+                    foregroundColor: c.textSecondary,
                     padding: EdgeInsets.zero,
                     minimumSize: Size.zero,
                     tapTargetSize: MaterialTapTargetSize.shrinkWrap,

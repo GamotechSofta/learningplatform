@@ -7,9 +7,12 @@ class SubscriptionProvider extends ChangeNotifier {
 
   final SubscriptionService _subscriptionService;
 
+  static const _refreshCooldown = Duration(minutes: 5);
+
   final Set<String> _activeCourseIds = {};
   List<UserSubscription> _subscriptions = [];
   bool _loading = false;
+  DateTime? _lastRefreshAt;
 
   bool get loading => _loading;
   Set<String> get activeCourseIds => Set.unmodifiable(_activeCourseIds);
@@ -18,7 +21,22 @@ class SubscriptionProvider extends ChangeNotifier {
 
   bool hasAccess(String courseId) => _activeCourseIds.contains(courseId);
 
-  Future<void> refresh(String userId) async {
+  Future<void> refresh(String userId, {bool forceRefresh = false}) async {
+    if (!forceRefresh &&
+        _lastRefreshAt != null &&
+        _subscriptions.isNotEmpty &&
+        DateTime.now().difference(_lastRefreshAt!) < _refreshCooldown) {
+      return;
+    }
+
+    if (_loading && !forceRefresh) return;
+
+    if (_loading && forceRefresh) {
+      while (_loading) {
+        await Future<void>.delayed(const Duration(milliseconds: 50));
+      }
+    }
+
     _loading = true;
     notifyListeners();
 
@@ -33,9 +51,9 @@ class SubscriptionProvider extends ChangeNotifier {
               .map((sub) => sub.course.id)
               .where((id) => id.isNotEmpty),
         );
+      _lastRefreshAt = DateTime.now();
     } catch (_) {
-      _subscriptions = [];
-      _activeCourseIds.clear();
+      // Keep the last known subscriptions when refresh fails.
     }
 
     _loading = false;
@@ -57,12 +75,14 @@ class SubscriptionProvider extends ChangeNotifier {
       created,
       ..._subscriptions.where((sub) => sub.course.id != courseId),
     ];
+    _lastRefreshAt = DateTime.now();
     notifyListeners();
   }
 
   void clear() {
     _activeCourseIds.clear();
     _subscriptions = [];
+    _lastRefreshAt = null;
     notifyListeners();
   }
 }

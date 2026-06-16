@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/themed_colors.dart';
 import '../../models/course.dart';
 import '../course_side_thumbnail.dart';
+import '../course_rating_stars.dart';
 
 class HomeCompactCourseRow extends StatelessWidget {
   const HomeCompactCourseRow({
@@ -18,6 +20,7 @@ class HomeCompactCourseRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final meta = <String>[
       if (course.categoryName != null && course.categoryName!.isNotEmpty)
         course.categoryName!,
@@ -29,7 +32,7 @@ class HomeCompactCourseRow extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(20, 0, 20, 10),
       child: Material(
-        color: AppColors.surface,
+        color: c.surface,
         borderRadius: BorderRadius.circular(14),
         child: InkWell(
           onTap: onTap,
@@ -38,7 +41,7 @@ class HomeCompactCourseRow extends StatelessWidget {
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: AppColors.border),
+              border: Border.all(color: c.border),
             ),
             child: Row(
               children: [
@@ -67,45 +70,47 @@ class HomeCompactCourseRow extends StatelessWidget {
                           ),
                           child: Text(
                             badge!,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 10,
                               fontWeight: FontWeight.w700,
                               color: Color(0xFFB45309),
                             ),
                           ),
                         ),
-                        const SizedBox(height: 4),
+                        SizedBox(height: 4),
                       ],
                       Text(
                         course.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
-                          color: AppColors.textPrimary,
+                          color: c.textPrimary,
                           height: 1.25,
                         ),
                       ),
+                      const SizedBox(height: 4),
+                      CourseRatingStars(course: course, starSize: 11),
                       if (meta.isNotEmpty) ...[
                         const SizedBox(height: 4),
                         Text(
                           meta.join(' • '),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
-                            color: AppColors.textSecondary,
+                            color: c.textSecondary,
                           ),
                         ),
                       ],
                     ],
                   ),
                 ),
-                const SizedBox(width: 8),
-                const Icon(
+                SizedBox(width: 8),
+                Icon(
                   Icons.chevron_right_rounded,
-                  color: AppColors.textSecondary,
+                  color: c.textSecondary,
                 ),
               ],
             ),

@@ -1,3 +1,6 @@
+import 'dart:async';
+import 'dart:io';
+
 import 'package:chewie/chewie.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
@@ -5,21 +8,27 @@ import 'package:provider/provider.dart';
 import 'package:video_player/video_player.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/theme/themed_colors.dart';
 import '../core/utils/course_access.dart';
+import '../core/utils/course_playlist.dart';
 import '../core/utils/notification_sync.dart';
 import '../core/utils/video_playback.dart';
+import '../core/utils/video_playback_session.dart';
 import '../models/certificate.dart';
 import '../models/course.dart';
-import '../models/video.dart';
 import '../providers/auth_provider.dart';
 import '../providers/learning_progress_provider.dart';
 import '../providers/subscription_provider.dart';
+import '../providers/video_engagement_provider.dart';
 import '../services/course_service.dart';
 import '../widgets/certificate_card.dart';
 import '../widgets/error_view.dart';
 import '../widgets/purchase_dialog.dart';
 import '../widgets/thumbnail_image.dart';
+import '../widgets/video/video_action_bar.dart';
+import '../widgets/video/video_next_overlay.dart';
 import '../widgets/video/video_player_info_panel.dart';
+import '../widgets/video/video_transport_bar.dart';
 import '../widgets/video/video_up_next_list.dart';
 
 class VideoPlayerScreen extends StatefulWidget {
@@ -40,7 +49,8 @@ class VideoPlayerScreen extends StatefulWidget {
   State<VideoPlayerScreen> createState() => _VideoPlayerScreenState();
 }
 
-class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
+class _VideoPlayerScreenState extends State<VideoPlayerScreen>
+    with WidgetsBindingObserver {
   VideoPlayerController? _videoController;
   ChewieController? _chewieController;
   String? _error;
@@ -52,11 +62,55 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   bool _isPurchased = false;
   bool _completionHandled = false;
   bool _loading = true;
+  bool _isBuffering = false;
+  String? _posterUrl;
+  String? _streamLabel;
+  String _downloadUrl = '';
+  CourseVideoEntry? _nextEntry;
+  CourseVideoEntry? _previousEntry;
+  bool _showAutoplayOverlay = false;
+  int _autoplaySecondsLeft = 5;
+  bool _autoplayCancelled = false;
+  Timer? _overlayTimer;
+
+  static const _autoplayLeadTime = Duration(seconds: 5);
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadVideo();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden) {
+      unawaited(_pausePlayback());
+    }
+  }
+
+  Future<void> _pausePlayback() async {
+    _stopPlayback();
+  }
+
+  /// Pause immediately when leaving the screen (sync — safe from dispose/deactivate).
+  void _stopPlayback() {
+    _cancelAutoplayOverlay();
+
+    final controller = _videoController;
+    if (controller != null && controller.value.isInitialized) {
+      try {
+        controller.pause();
+      } catch (_) {}
+    }
+
+    try {
+      _chewieController?.pause();
+    } catch (_) {}
+
+    unawaited(VideoPlaybackSession.instance.pauseActive());
   }
 
   @override
@@ -65,6 +119,8 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     if (oldWidget.videoId != widget.videoId ||
         oldWidget.lessonId != widget.lessonId) {
       _completionHandled = false;
+      _autoplayCancelled = false;
+      _cancelAutoplayOverlay();
       _title = 'Video';
       _loadVideo();
     }
@@ -75,14 +131,55 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       _loading = true;
       _error = null;
       _locked = false;
+      _nextEntry = null;
+      _previousEntry = null;
+      _showAutoplayOverlay = false;
+      _isBuffering = false;
+      _posterUrl = null;
+      _streamLabel = null;
+      _downloadUrl = '';
     });
 
+    _cancelAutoplayOverlay();
     await _disposePlayer();
 
     try {
       if (!mounted) return;
       final subs = context.read<SubscriptionProvider>();
-      final rawCourse = await widget.courseService.getCourseFull(widget.courseId);
+      final engagement = context.read<VideoEngagementProvider>();
+      final cachedCourse = widget.courseService.peekCourseFull(widget.courseId);
+
+      if (cachedCourse != null) {
+        _applyCourseContext(cachedCourse, subs);
+        setState(() {});
+      }
+
+      final playbackFuture = widget.courseService.getVideoPlayback(
+        widget.courseId,
+        widget.videoId,
+      );
+
+      final needsFreshCourse = cachedCourse == null ||
+          subs.hasAccess(widget.courseId);
+
+      if (cachedCourse != null && needsFreshCourse) {
+        unawaited(_refreshCourseInBackground(subs));
+      }
+
+      final playback = await playbackFuture;
+
+      Course rawCourse = cachedCourse ??
+          await widget.courseService.getCourseFull(widget.courseId);
+
+      if (cachedCourse == null) {
+        _applyCourseContext(rawCourse, subs);
+      }
+
+      _title = playback.title;
+      _lessonTitle = playback.lessonTitle;
+      _videoDuration = playback.duration;
+      _posterUrl = playback.thumbnail ?? rawCourse.thumbnail;
+
       final subscriptionActive = subs.hasAccess(rawCourse.id);
       final isPurchased = CourseAccess.isCoursePurchased(
         rawCourse,
@@ -97,33 +194,26 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         subscriptionActive: subscriptionActive,
       );
 
-      VideoItem? video;
-      String lessonTitle = '';
-      for (final lesson in course.lessons) {
-        for (final item in lesson.videos) {
-          if (item.id == widget.videoId) {
-            video = item;
-            lessonTitle = lesson.title;
-            break;
-          }
-        }
-        if (video != null) break;
-      }
-
-      if (video == null) {
-        throw Exception('Video not found in this course');
-      }
-
-      _title = video.title;
-      _lessonTitle = lessonTitle;
-      _videoDuration = video.duration;
       _course = course;
       _isPurchased = isPurchased;
+      _nextEntry = nextPlayableVideo(course, widget.videoId);
+      _previousEntry = previousPlayableVideo(course, widget.videoId);
 
-      final playbackUrl = VideoPlayback.resolveUrl(video.videoUrl);
+      final mp4Url = VideoPlayback.resolveUrl(playback.videoUrl);
+      if (mp4Url.isNotEmpty &&
+          !VideoPlayback.isHlsManifest(mp4Url) &&
+          VideoPlayback.isEmbeddableStream(mp4Url)) {
+        _downloadUrl = mp4Url;
+      }
+
+      final playbackUrl = VideoPlayback.resolvePlaybackSource(
+        hlsUrl: playback.hlsUrl,
+        mp4Url: playback.videoUrl,
+        streamingStatus: playback.streamingStatus,
+      );
       final paywalled = course.isPaid && !hasFullAccess;
 
-      if (video.isLocked || (paywalled && playbackUrl.isEmpty)) {
+      if (playback.isLocked || (paywalled && playbackUrl.isEmpty)) {
         if (!mounted) return;
         setState(() {
           _locked = true;
@@ -132,31 +222,34 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         return;
       }
 
-      if (playbackUrl.isEmpty) {
+      String sourceUrl = playbackUrl;
+      final offline = engagement.downloadFor(widget.videoId);
+      if (offline != null) {
+        final file = File(offline.localPath);
+        if (await file.exists()) {
+          sourceUrl = offline.localPath;
+        }
+      }
+
+      if (sourceUrl.isEmpty) {
         throw Exception('This video file is not available yet.');
       }
 
-      if (!VideoPlayback.isEmbeddableStream(playbackUrl)) {
+      if (!sourceUrl.startsWith('http://') && !sourceUrl.startsWith('https://')) {
+        // Offline file — skip embeddable check.
+      } else if (!VideoPlayback.isEmbeddableStream(sourceUrl)) {
         throw Exception(
           'This video uses an external link that cannot be played in the app.',
         );
       }
 
-      final controller = VideoPlayerController.networkUrl(
-        Uri.parse(playbackUrl),
-        videoPlayerOptions: VideoPlayerOptions(
-          mixWithOthers: true,
-          allowBackgroundPlayback: false,
-        ),
-      );
+      _streamLabel = sourceUrl == playbackUrl
+          ? VideoPlayback.streamQualityLabel(playbackUrl)
+          : 'Offline';
 
-      await controller.initialize().timeout(
-        const Duration(seconds: 60),
-        onTimeout: () => throw Exception(
-          'Video is taking too long to load. Check your connection and try again.',
-        ),
-      );
+      final controller = await _createPlayerController(sourceUrl);
 
+      await VideoPlaybackSession.instance.claim(this, controller);
       controller.addListener(_onPlaybackUpdate);
 
       if (!mounted) {
@@ -183,10 +276,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
             bufferedColor: Colors.white24,
             backgroundColor: Colors.white12,
           ),
-          placeholder: const ColoredBox(color: Colors.black),
+          placeholder: _buildPosterPlaceholder(),
         );
         _loading = false;
       });
+
+      _schedulePreloadNext();
     } catch (error) {
       if (!mounted) return;
       setState(() {
@@ -196,12 +291,119 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     }
   }
 
+  void _applyCourseContext(Course rawCourse, SubscriptionProvider subs) {
+    final subscriptionActive = subs.hasAccess(rawCourse.id);
+    final course = CourseAccess.applyPlaybackLocks(
+      rawCourse,
+      subscriptionActive: subscriptionActive,
+    );
+    _course = course;
+    _isPurchased = CourseAccess.isCoursePurchased(
+      rawCourse,
+      subscriptionActive: subscriptionActive,
+    );
+    _nextEntry = nextPlayableVideo(course, widget.videoId);
+    _previousEntry = previousPlayableVideo(course, widget.videoId);
+
+    for (final lesson in course.lessons) {
+      for (final video in lesson.videos) {
+        if (video.id == widget.videoId) {
+          _title = video.title;
+          _lessonTitle = lesson.title;
+          _videoDuration = video.duration;
+          _posterUrl = course.thumbnail ?? video.thumbnail;
+          break;
+        }
+      }
+    }
+  }
+
+  Future<void> _refreshCourseInBackground(SubscriptionProvider subs) async {
+    try {
+      final fresh = await widget.courseService.getCourseFull(widget.courseId);
+      if (!mounted) return;
+      _applyCourseContext(fresh, subs);
+      setState(() {});
+    } catch (_) {
+      // Keep showing cached playlist if refresh fails.
+    }
+  }
+
+  Widget _buildPosterPlaceholder() {
+    final poster = _posterUrl;
+    if (poster == null || poster.isEmpty) {
+      return const ColoredBox(color: Colors.black);
+    }
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ThumbnailImage(url: poster, borderRadius: 0, fit: BoxFit.cover),
+        const ColoredBox(color: Color(0x66000000)),
+      ],
+    );
+  }
+
+  Future<VideoPlayerController> _createPlayerController(String url) async {
+    final isNetwork =
+        url.startsWith('http://') || url.startsWith('https://');
+    final isHls = isNetwork && VideoPlayback.isHlsManifest(url);
+    final timeout = isHls
+        ? const Duration(seconds: 60)
+        : const Duration(seconds: 30);
+
+    final options = VideoPlayerOptions(
+      mixWithOthers: false,
+      allowBackgroundPlayback: false,
+    );
+
+    final controller = isNetwork
+        ? VideoPlayerController.networkUrl(
+            Uri.parse(url),
+            videoPlayerOptions: options,
+          )
+        : VideoPlayerController.file(
+            File(url),
+            videoPlayerOptions: options,
+          );
+
+    await controller.initialize().timeout(
+      timeout,
+      onTimeout: () => throw Exception(
+        'Video is taking too long to load. Check your connection and try again.',
+      ),
+    );
+
+    return controller;
+  }
+
+  void _schedulePreloadNext() {
+    final next = _nextEntry;
+    if (next == null || next.video.isLocked) return;
+
+    widget.courseService.prefetchVideoPlayback(
+      widget.courseId,
+      next.video.id,
+    );
+  }
+
   Future<void> _disposePlayer() async {
+    final controller = _videoController;
     _videoController?.removeListener(_onPlaybackUpdate);
+
+    if (controller != null) {
+      try {
+        await controller.pause();
+      } catch (_) {}
+      await VideoPlaybackSession.instance.release(this, controller);
+    }
+
     _chewieController?.dispose();
-    await _videoController?.dispose();
     _chewieController = null;
     _videoController = null;
+
+    if (controller != null) {
+      await controller.dispose();
+    }
   }
 
   void _onPlaybackUpdate() {
@@ -209,20 +411,88 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     final course = _course;
     if (controller == null ||
         course == null ||
-        _completionHandled ||
         !controller.value.isInitialized) {
       return;
+    }
+
+    final buffering = controller.value.isBuffering;
+    if (_isBuffering != buffering && mounted) {
+      setState(() => _isBuffering = buffering);
     }
 
     final duration = controller.value.duration;
     final position = controller.value.position;
     if (duration.inMilliseconds <= 0) return;
 
-    final nearEnd = position >= duration - const Duration(seconds: 2);
+    final remaining = duration - position;
+    _updateAutoplayOverlay(remaining);
+
+    if (_completionHandled) return;
+
+    final nearEnd = remaining <= const Duration(seconds: 1);
     if (!nearEnd) return;
 
     _completionHandled = true;
+    _cancelAutoplayOverlay();
     _handleVideoCompleted(course);
+  }
+
+  void _updateAutoplayOverlay(Duration remaining) {
+    final next = _nextEntry;
+    if (next == null || _autoplayCancelled || _locked) {
+      if (_showAutoplayOverlay) _cancelAutoplayOverlay();
+      return;
+    }
+
+    if (remaining > _autoplayLeadTime) {
+      if (_showAutoplayOverlay) _cancelAutoplayOverlay();
+      return;
+    }
+
+    final secondsLeft = remaining.inSeconds.clamp(0, _autoplayLeadTime.inSeconds);
+    if (!_showAutoplayOverlay) {
+      setState(() {
+        _showAutoplayOverlay = true;
+        _autoplaySecondsLeft = secondsLeft > 0 ? secondsLeft : 1;
+      });
+      _startOverlayTicker();
+      return;
+    }
+
+    if (_autoplaySecondsLeft != secondsLeft && mounted) {
+      setState(() => _autoplaySecondsLeft = secondsLeft);
+    }
+  }
+
+  void _startOverlayTicker() {
+    _overlayTimer?.cancel();
+    _overlayTimer = Timer.periodic(const Duration(milliseconds: 500), (_) {
+      final controller = _videoController;
+      if (!mounted || controller == null || !controller.value.isInitialized) {
+        return;
+      }
+      final remaining = controller.value.duration - controller.value.position;
+      if (remaining <= Duration.zero) {
+        _overlayTimer?.cancel();
+      }
+      _updateAutoplayOverlay(remaining);
+    });
+  }
+
+  void _cancelAutoplayOverlay() {
+    _overlayTimer?.cancel();
+    _overlayTimer = null;
+    if (_showAutoplayOverlay && mounted) {
+      setState(() {
+        _showAutoplayOverlay = false;
+        _autoplaySecondsLeft = _autoplayLeadTime.inSeconds;
+      });
+    }
+  }
+
+  void _cancelAutoplay() {
+    _autoplayCancelled = true;
+    _cancelAutoplayOverlay();
   }
 
   Future<void> _handleVideoCompleted(Course course) async {
@@ -250,28 +520,26 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       return;
     }
 
-    final next = _nextPlayableAfterCurrent(course);
+    final next = _nextEntry;
     if (next != null && mounted) {
       _playVideo(next);
     }
   }
 
-  CourseVideoEntry? _nextPlayableAfterCurrent(Course course) {
-    final playlist = courseVideoPlaylist(course);
-    final currentIndex = playlist.indexWhere((e) => e.video.id == widget.videoId);
-    if (currentIndex < 0) return null;
+  void _playPrevious() {
+    final previous = _previousEntry;
+    if (previous != null) _playVideo(previous);
+  }
 
-    for (var i = currentIndex + 1; i < playlist.length; i++) {
-      final entry = playlist[i];
-      if (!entry.video.isLocked && entry.video.videoUrl.isNotEmpty) {
-        return entry;
-      }
-    }
-    return null;
+  void _playNext() {
+    final next = _nextEntry;
+    if (next != null) _playVideo(next);
   }
 
   void _playVideo(CourseVideoEntry entry) {
     if (entry.video.id == widget.videoId) return;
+    _cancelAutoplayOverlay();
+    unawaited(_pausePlayback());
     context.replace(
       '/courses/${widget.courseId}/lessons/${entry.lessonId}/videos/${entry.video.id}',
     );
@@ -292,21 +560,26 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       context: context,
       barrierDismissible: false,
       builder: (dialogContext) {
+        final c = dialogContext.colors;
         return AlertDialog(
           contentPadding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
           content: SingleChildScrollView(
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
+                Text(
                   'Congratulations!',
-                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w800,
+                    color: c.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'You completed ${_course?.title ?? 'the course'}.',
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: AppColors.textSecondary),
+                  style: TextStyle(color: c.textSecondary),
                 ),
                 const SizedBox(height: 16),
                 CertificateCard(certificate: certificate, compact: true),
@@ -337,9 +610,55 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
   }
 
   @override
+  void deactivate() {
+    _stopPlayback();
+    super.deactivate();
+  }
+
+  @override
   void dispose() {
-    _disposePlayer();
+    WidgetsBinding.instance.removeObserver(this);
+    _stopPlayback();
+    unawaited(_disposePlayer());
     super.dispose();
+  }
+
+  Widget _buildPlayerArea() {
+    final playlist = _course == null
+        ? const <CourseVideoEntry>[]
+        : courseVideoPlaylist(_course!);
+    final position = _course == null
+        ? 1
+        : playlistIndex(_course!, widget.videoId) + 1;
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Stack(
+          children: [
+            _buildPlayerSlot(),
+            if (_showAutoplayOverlay && _nextEntry != null)
+              VideoNextOverlay(
+                next: _nextEntry!,
+                secondsLeft: _autoplaySecondsLeft,
+                onCancel: _cancelAutoplay,
+                onPlayNow: () => _playVideo(_nextEntry!),
+                courseThumbnail: _course?.thumbnail,
+              ),
+          ],
+        ),
+        if (!_locked && _course != null)
+          VideoTransportBar(
+            videoTitle: _title,
+            playlistPosition: position > 0 ? position : 1,
+            playlistTotal: playlist.length,
+            previous: _previousEntry,
+            next: _nextEntry,
+            onPrevious: _playPrevious,
+            onNext: _playNext,
+          ),
+      ],
+    );
   }
 
   Widget _buildPlayerSlot() {
@@ -395,16 +714,35 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
     }
 
     if (_loading || _chewieController == null) {
-      return const AspectRatio(
+      return AspectRatio(
         aspectRatio: 16 / 9,
-        child: ColoredBox(
-          color: Colors.black,
-          child: Center(
-            child: CircularProgressIndicator(
-              color: AppColors.primary,
-              strokeWidth: 2.5,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            _buildPosterPlaceholder(),
+            Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const CircularProgressIndicator(
+                    color: AppColors.primary,
+                    strokeWidth: 2.5,
+                  ),
+                  if (_streamLabel != null) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      _streamLabel!,
+                      style: const TextStyle(
+                        color: Colors.white70,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
+              ),
             ),
-          ),
+          ],
         ),
       );
     }
@@ -413,17 +751,55 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       aspectRatio: _videoController!.value.aspectRatio == 0
           ? 16 / 9
           : _videoController!.value.aspectRatio,
-      child: Chewie(controller: _chewieController!),
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Chewie(controller: _chewieController!),
+          if (_isBuffering)
+            const ColoredBox(
+              color: Color(0x33000000),
+              child: Center(
+                child: CircularProgressIndicator(
+                  color: Colors.white,
+                  strokeWidth: 2.5,
+                ),
+              ),
+            ),
+          if (_streamLabel != null)
+            Positioned(
+              left: 12,
+              bottom: 12,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: Colors.black.withValues(alpha: 0.55),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  child: Text(
+                    _streamLabel!,
+                    style: const TextStyle(
+                      color: Colors.white70,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
     );
   }
 
   Widget _buildContentSheet({required Set<String> watchedIds}) {
+    final c = context.colors;
     final course = _course!;
 
     return Container(
-      decoration: const BoxDecoration(
-        color: AppColors.background,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      decoration: BoxDecoration(
+        color: c.background,
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
       ),
       child: ListView(
         padding: EdgeInsets.zero,
@@ -434,19 +810,27 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
               width: 36,
               height: 4,
               decoration: BoxDecoration(
-                color: AppColors.border,
+                color: c.border,
                 borderRadius: BorderRadius.circular(99),
               ),
             ),
           ),
           VideoPlayerInfoPanel(
-            course: course,
             videoTitle: _title,
             lessonTitle: _lessonTitle.isEmpty ? 'Lesson' : _lessonTitle,
             videoDurationSeconds: _videoDuration,
             isWatched: watchedIds.contains(widget.videoId),
           ),
-          const Divider(height: 1, color: AppColors.border),
+          VideoActionBar(
+            videoId: widget.videoId,
+            courseId: widget.courseId,
+            videoTitle: _title,
+            playbackUrl: _downloadUrl,
+            lessonId: widget.lessonId,
+            courseTitle: _course?.title,
+            isLocked: _locked,
+          ),
+          Divider(height: 1, color: c.border),
           VideoUpNextList(
             course: course,
             currentVideoId: widget.videoId,
@@ -469,6 +853,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         elevation: 0,
+        leading: BackButton(
+          onPressed: () {
+            _stopPlayback();
+            context.pop();
+          },
+        ),
         title: Text(
           _course?.title ?? 'Course',
           maxLines: 1,
@@ -478,7 +868,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
       ),
       body: _error != null
           ? ColoredBox(
-              color: AppColors.background,
+              color: context.colors.background,
               child: ErrorView(message: _error!, onRetry: _loadVideo),
             )
           : _course == null
@@ -491,7 +881,7 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen> {
               : Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    _buildPlayerSlot(),
+                    _buildPlayerArea(),
                     Expanded(
                       child: _buildContentSheet(watchedIds: watchedIds),
                     ),

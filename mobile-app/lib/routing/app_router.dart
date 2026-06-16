@@ -2,10 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../providers/auth_provider.dart';
+import '../providers/network_provider.dart';
+import '../core/utils/offline_routes.dart';
 import '../screens/category_detail_screen.dart';
 import '../screens/certificate_detail_screen.dart';
 import '../screens/checkout_screen.dart';
 import '../screens/course_detail_screen.dart';
+import '../screens/downloaded_videos_screen.dart';
 import '../screens/learning_track_onboarding_screen.dart';
 import '../screens/login_screen.dart';
 import '../screens/main_shell.dart';
@@ -21,6 +24,7 @@ import '../services/subscription_service.dart';
 class AppRouter {
   AppRouter({
     required this.authProvider,
+    required this.networkProvider,
     required this.categoryService,
     required this.courseService,
     required this.subscriptionService,
@@ -28,6 +32,7 @@ class AppRouter {
   });
 
   final AuthProvider authProvider;
+  final NetworkProvider networkProvider;
   final CategoryService categoryService;
   final CourseService courseService;
   final SubscriptionService subscriptionService;
@@ -38,12 +43,16 @@ class AppRouter {
 
   late final GoRouter router = GoRouter(
     initialLocation: '/',
-    refreshListenable: authProvider,
+    refreshListenable: Listenable.merge([authProvider, networkProvider]),
     redirect: (context, state) {
       final location = state.matchedLocation;
       final isPublic = _publicRoutes.contains(location);
 
-      if (!authProvider.isAuthenticated && !isPublic) {
+      if (networkProvider.isOffline && !isOfflineAllowedRoute(location)) {
+        return '/downloads';
+      }
+
+      if (!authProvider.isAuthenticated && !isPublic && !networkProvider.isOffline) {
         return '/login';
       }
 
@@ -84,6 +93,14 @@ class AppRouter {
         builder: (context, state) => const NotificationsScreen(),
       ),
       GoRoute(
+        path: '/downloads',
+        builder: (context, state) {
+          return DownloadedVideosScreen(
+            courseService: courseService,
+          );
+        },
+      ),
+      GoRoute(
         path: '/search',
         builder: (context, state) => SearchPage(categoryService: categoryService),
       ),
@@ -99,6 +116,7 @@ class AppRouter {
         builder: (context, state) => CourseDetailScreen(
           courseId: state.pathParameters['id']!,
           courseService: courseService,
+          showPurchaseThanks: state.uri.queryParameters['thanks'] == '1',
         ),
       ),
       GoRoute(

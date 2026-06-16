@@ -6,6 +6,7 @@ import {
   getCourseById,
   getCourseBySlug,
   getCourseWithLessons,
+  getVideoPlayback,
   updateCourse,
   deleteCourse,
 } from "../controllers/courseController.js";
@@ -18,6 +19,7 @@ const router = express.Router();
 router.get("/", getCourses);
 router.get("/video-counts", getCoursesVideoCounts);
 router.get("/slug/:slug", getCourseBySlug);
+router.get("/:id/videos/:videoId/playback", optionalProtect, getVideoPlayback);
 router.get("/:id/full", optionalProtect, getCourseWithLessons);
 router.get("/:id", getCourseById);
 

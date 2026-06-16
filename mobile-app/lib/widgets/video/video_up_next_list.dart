@@ -1,37 +1,10 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/themed_colors.dart';
+import '../../core/utils/course_playlist.dart';
 import '../../models/course.dart';
-import '../../models/video.dart';
 import '../thumbnail_image.dart';
-
-class CourseVideoEntry {
-  const CourseVideoEntry({
-    required this.lessonId,
-    required this.lessonTitle,
-    required this.video,
-  });
-
-  final String lessonId;
-  final String lessonTitle;
-  final VideoItem video;
-}
-
-List<CourseVideoEntry> courseVideoPlaylist(Course course) {
-  final items = <CourseVideoEntry>[];
-  for (final lesson in course.lessons) {
-    for (final video in lesson.videos) {
-      items.add(
-        CourseVideoEntry(
-          lessonId: lesson.id,
-          lessonTitle: lesson.title,
-          video: video,
-        ),
-      );
-    }
-  }
-  return items;
-}
 
 class VideoUpNextList extends StatelessWidget {
   const VideoUpNextList({
@@ -49,13 +22,16 @@ class VideoUpNextList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final playlist = courseVideoPlaylist(course);
-    if (playlist.isEmpty) return const SizedBox.shrink();
+    if (playlist.isEmpty) return SizedBox.shrink();
 
     final currentIndex = playlist.indexWhere((e) => e.video.id == currentVideoId);
     final upNext = currentIndex < 0
         ? playlist
         : playlist.sublist(currentIndex + 1);
+    final immediateNext =
+        upNext.isNotEmpty ? upNext.first : null;
 
     if (upNext.isEmpty) {
       return Padding(
@@ -64,11 +40,11 @@ class VideoUpNextList extends StatelessWidget {
           width: double.infinity,
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: AppColors.primaryLight,
+            color: c.primaryTint,
             borderRadius: BorderRadius.circular(14),
             border: Border.all(color: AppColors.primary.withValues(alpha: 0.2)),
           ),
-          child: const Row(
+          child: Row(
             children: [
               Icon(Icons.emoji_events_outlined, color: AppColors.primary),
               SizedBox(width: 12),
@@ -78,7 +54,7 @@ class VideoUpNextList extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w600,
-                    color: AppColors.textPrimary,
+                    color: c.textPrimary,
                     height: 1.35,
                   ),
                 ),
@@ -92,14 +68,27 @@ class VideoUpNextList extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Padding(
-          padding: EdgeInsets.fromLTRB(20, 4, 20, 12),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 12, 20, 4),
+          child: Text(
+            course.title,
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: FontWeight.w700,
+              color: c.textPrimary,
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(20, 4, 20, 12),
           child: Text(
             'Up next',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
+              color: c.textPrimary,
             ),
           ),
         ),
@@ -107,7 +96,9 @@ class VideoUpNextList extends StatelessWidget {
           (entry) => _UpNextTile(
             entry: entry,
             index: playlist.indexOf(entry) + 1,
+            courseThumbnail: course.thumbnail,
             isWatched: watchedVideoIds.contains(entry.video.id),
+            isUpNext: immediateNext?.video.id == entry.video.id,
             onTap: () => onVideoSelected(entry),
           ),
         ),
@@ -121,37 +112,45 @@ class _UpNextTile extends StatelessWidget {
   const _UpNextTile({
     required this.entry,
     required this.index,
+    required this.courseThumbnail,
     required this.isWatched,
+    required this.isUpNext,
     required this.onTap,
   });
 
   final CourseVideoEntry entry;
   final int index;
+  final String? courseThumbnail;
   final bool isWatched;
+  final bool isUpNext;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final locked = entry.video.isLocked;
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 4),
       child: Material(
-        color: Colors.transparent,
+        color: isUpNext
+            ? c.primaryTint.withValues(alpha: 0.55)
+            : Colors.transparent,
+        borderRadius: BorderRadius.circular(12),
         child: InkWell(
           onTap: onTap,
           borderRadius: BorderRadius.circular(12),
           child: Padding(
-            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+            padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   '$index',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.w700,
-                    color: AppColors.textSecondary,
+                    color: isUpNext ? AppColors.primary : c.textSecondary,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -160,8 +159,7 @@ class _UpNextTile extends StatelessWidget {
                   child: Stack(
                     children: [
                       ThumbnailImage(
-                        url: locked ? null : entry.video.thumbnail,
-                        videoUrl: locked ? null : entry.video.frameSourceUrl,
+                        url: courseThumbnail,
                         width: 128,
                         height: 72,
                         borderRadius: 0,
@@ -185,7 +183,7 @@ class _UpNextTile extends StatelessWidget {
                               borderRadius: BorderRadius.circular(4),
                             ),
                             child: Text(
-                              _formatDuration(entry.video.duration),
+                              formatVideoDuration(entry.video.duration),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
@@ -202,6 +200,18 @@ class _UpNextTile extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      if (isUpNext)
+                        Padding(
+                          padding: EdgeInsets.only(bottom: 4),
+                          child: Text(
+                            'Playing next',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.w800,
+                              color: AppColors.primary,
+                            ),
+                          ),
+                        ),
                       Text(
                         entry.video.title,
                         maxLines: 2,
@@ -210,19 +220,19 @@ class _UpNextTile extends StatelessWidget {
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
                           color: locked
-                              ? AppColors.textSecondary
-                              : AppColors.textPrimary,
+                              ? c.textSecondary
+                              : c.textPrimary,
                           height: 1.3,
                         ),
                       ),
-                      const SizedBox(height: 4),
+                      SizedBox(height: 4),
                       Text(
                         entry.lessonTitle,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 12,
-                          color: AppColors.textSecondary,
+                          color: c.textSecondary,
                         ),
                       ),
                       if (locked || isWatched) ...[
@@ -252,40 +262,31 @@ class _Tag extends StatelessWidget {
   const _Tag({
     required this.label,
     required this.icon,
-    this.color = AppColors.textSecondary,
+    this.color,
   });
 
   final String label;
   final IconData icon;
-  final Color color;
+  final Color? color;
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
+    final tagColor = color ?? c.textSecondary;
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 13, color: color),
+        Icon(icon, size: 13, color: tagColor),
         const SizedBox(width: 4),
         Text(
           label,
           style: TextStyle(
             fontSize: 11,
             fontWeight: FontWeight.w600,
-            color: color,
+            color: tagColor,
           ),
         ),
       ],
     );
   }
-}
-
-String _formatDuration(int seconds) {
-  if (seconds <= 0) return '';
-  final hours = seconds ~/ 3600;
-  final minutes = (seconds % 3600) ~/ 60;
-  final remaining = seconds % 60;
-  if (hours > 0) {
-    return '$hours:${minutes.toString().padLeft(2, '0')}:${remaining.toString().padLeft(2, '0')}';
-  }
-  return '$minutes:${remaining.toString().padLeft(2, '0')}';
 }

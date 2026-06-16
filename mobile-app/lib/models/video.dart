@@ -5,6 +5,7 @@ class VideoItem {
     required this.id,
     required this.title,
     required this.videoUrl,
+    this.hlsUrl,
     this.description,
     this.thumbnail,
     this.duration = 0,
@@ -19,6 +20,7 @@ class VideoItem {
   final String title;
   final String? description;
   final String videoUrl;
+  final String? hlsUrl;
   final String? thumbnail;
   final String? previewVideoUrl;
   final int duration;
@@ -26,6 +28,14 @@ class VideoItem {
   final bool isPublished;
   final bool isFree;
   final bool isLocked;
+
+  /// True when the video has an unlocked progressive or HLS source.
+  bool get hasPlayableSource {
+    if (isLocked) return false;
+    if (videoUrl.isNotEmpty) return true;
+    final hls = hlsUrl;
+    return hls != null && hls.isNotEmpty;
+  }
 
   /// URL used to extract a poster frame (playback URL or locked preview).
   String? get frameSourceUrl {
@@ -41,6 +51,7 @@ class VideoItem {
     String? title,
     String? description,
     String? videoUrl,
+    String? hlsUrl,
     String? thumbnail,
     String? previewVideoUrl,
     int? duration,
@@ -54,6 +65,7 @@ class VideoItem {
       title: title ?? this.title,
       description: description ?? this.description,
       videoUrl: videoUrl ?? this.videoUrl,
+      hlsUrl: hlsUrl ?? this.hlsUrl,
       thumbnail: thumbnail ?? this.thumbnail,
       previewVideoUrl: previewVideoUrl ?? this.previewVideoUrl,
       duration: duration ?? this.duration,
@@ -72,6 +84,7 @@ class VideoItem {
       title: json['title']?.toString() ?? 'Untitled',
       description: json['description']?.toString(),
       videoUrl: isLocked ? '' : _resolvePlaybackUrl(json),
+      hlsUrl: isLocked ? null : _resolveHlsUrl(json),
       previewVideoUrl: MediaUrl.resolve(json['previewVideoUrl']?.toString()),
       thumbnail: MediaUrl.resolve(
         json['thumbnail']?.toString() ?? json['thumbnailKey']?.toString(),
@@ -92,5 +105,13 @@ class VideoItem {
       json['videoKey']?.toString(),
       externalUrl: json['externalUrl']?.toString(),
     );
+  }
+
+  static String? _resolveHlsUrl(Map<String, dynamic> json) {
+    if (json['hlsUrl']?.toString().isNotEmpty == true) {
+      return MediaUrl.resolve(json['hlsUrl']?.toString());
+    }
+    final fromKey = MediaUrl.resolve(json['hlsKey']?.toString());
+    return fromKey?.isNotEmpty == true ? fromKey : null;
   }
 }

@@ -4,7 +4,7 @@ import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 
 import '../core/constants/app_assets.dart';
-import '../core/theme/app_colors.dart';
+import '../core/theme/themed_colors.dart';
 import '../core/utils/media_url.dart';
 import '../services/video_frame_thumbnail_service.dart';
 
@@ -197,10 +197,11 @@ class _ThumbnailImageState extends State<ThumbnailImage> {
   }
 
   Widget _placeholder(BuildContext context, {bool loading = false}) {
+    final c = context.colors;
     return Container(
       width: widget.width,
       height: widget.height,
-      color: AppColors.placeholder,
+      color: c.placeholder,
       child: Center(
         child: loading
             ? const SizedBox(

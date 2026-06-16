@@ -1,8 +1,13 @@
 import 'package:flutter/material.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/theme/themed_colors.dart';
+import '../core/utils/course_list_utils.dart';
 import '../models/course.dart';
-import 'course_side_thumbnail.dart';
+import 'animated_pressable.dart';
+import 'course_placeholder_thumbnail.dart';
+import 'course_rating_stars.dart';
+import 'thumbnail_image.dart';
 
 class CourseCard extends StatelessWidget {
   const CourseCard({
@@ -14,74 +19,87 @@ class CourseCard extends StatelessWidget {
   final Course course;
   final VoidCallback onTap;
 
-  static const _thumbWidth = 120.0;
-  static const _thumbHeight = 90.0;
+  static const _thumbWidth = 104.0;
+  static const _thumbHeight = 68.0;
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      clipBehavior: Clip.antiAlias,
-      color: AppColors.surface,
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(14),
-        side: const BorderSide(color: AppColors.border),
-      ),
-      child: InkWell(
-        onTap: onTap,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            CourseSideThumbnail(
-              course: course,
-              width: _thumbWidth,
-              height: _thumbHeight,
-            ),
-            Expanded(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(12, 10, 12, 10),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
+    final c = context.colors;
+
+    return AnimatedPressable(
+      onTap: onTap,
+      borderRadius: 12,
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          color: c.surface,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: c.border.withValues(alpha: 0.7)),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(10),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(8),
+                child: SizedBox(
+                  width: _thumbWidth,
+                  height: _thumbHeight,
+                  child: _CardThumbnail(course: course),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: SizedBox(
+                  height: _thumbHeight,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
                       Text(
                         course.title,
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                              fontWeight: FontWeight.w700,
-                              color: AppColors.textPrimary,
-                              height: 1.2,
-                            ),
-                      ),
-                      if (course.categoryName != null &&
-                          course.categoryName!.isNotEmpty) ...[
-                        const SizedBox(height: 2),
-                        Text(
-                          course.categoryName!,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                                color: AppColors.primary,
-                                fontWeight: FontWeight.w600,
-                              ),
+                        style: TextStyle(
+                          fontWeight: FontWeight.w700,
+                          color: c.textPrimary,
+                          height: 1.25,
+                          fontSize: 14,
                         ),
-                      ],
-                      const SizedBox(height: 8),
-                      Wrap(
-                        spacing: 6,
-                        runSpacing: 6,
-                        crossAxisAlignment: WrapCrossAlignment.center,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        _metaLine(course),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w600,
+                          color: c.textSecondary,
+                        ),
+                      ),
+                      const Spacer(),
+                      Row(
                         children: [
-                          if (course.isPaid) const _Chip(label: 'Premium', premium: true),
-                          if (course.videoCount > 0)
-                            _Chip(label: '${course.videoCount} videos'),
+                          CourseRatingStars(course: course, starSize: 11),
+                          if (course.videoCount > 0) ...[
+                            const SizedBox(width: 8),
+                            Text(
+                              '${course.videoCount}',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w600,
+                                color: c.textSecondary,
+                              ),
+                            ),
+                          ],
+                          const Spacer(),
                           Text(
-                            course.pricing.displayPrice,
-                            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                                  color: AppColors.primary,
-                                  fontWeight: FontWeight.w800,
-                                ),
+                            _priceLabel(course),
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                              color: _priceColor(course),
+                            ),
                           ),
                         ],
                       ),
@@ -92,80 +110,63 @@ class CourseCard extends StatelessWidget {
             ],
           ),
         ),
-    );
-  }
-}
-
-class _Chip extends StatelessWidget {
-  const _Chip({
-    required this.label,
-    this.premium = false,
-  });
-
-  final String label;
-  final bool premium;
-
-  @override
-  Widget build(BuildContext context) {
-    if (premium) return const _ShinyPremiumBadge();
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.primaryLight,
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: AppColors.primary,
-              fontWeight: FontWeight.w600,
-            ),
       ),
     );
   }
+
+  String _metaLine(Course course) {
+    final parts = <String>[];
+    if (course.categoryName != null && course.categoryName!.isNotEmpty) {
+      parts.add(course.categoryName!);
+    }
+    parts.add(_levelLabel(course.level));
+    if (course.isPaid) parts.add('Premium');
+    return parts.join(' · ');
+  }
+
+  String _levelLabel(String level) {
+    return switch (level.toLowerCase()) {
+      'intermediate' => 'Intermediate',
+      'advanced' => 'Advanced',
+      _ => 'Beginner',
+    };
+  }
+
+  String _priceLabel(Course course) {
+    if (!course.pricing.isPaid) return 'Free';
+    return course.pricing.displayPrice;
+  }
+
+  Color _priceColor(Course course) {
+    if (!course.pricing.isPaid) return AppColors.accentGreen;
+    return AppColors.primary;
+  }
 }
 
-class _ShinyPremiumBadge extends StatelessWidget {
-  const _ShinyPremiumBadge();
+class _CardThumbnail extends StatelessWidget {
+  const _CardThumbnail({required this.course});
+
+  final Course course;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(999),
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Color(0xFFFFF59D),
-            Color(0xFFFFD54F),
-            Color(0xFFFFB300),
-            Color(0xFFFF8F00),
-          ],
-          stops: [0.0, 0.35, 0.72, 1.0],
-        ),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.workspace_premium_rounded,
-            size: 13,
-            color: const Color(0xFF5D4037).withValues(alpha: 0.9),
-          ),
-          const SizedBox(width: 4),
-          Text(
-            'Premium',
-            style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                  color: const Color(0xFF4E342E),
-                  fontWeight: FontWeight.w800,
-                  letterSpacing: 0.2,
-                ),
-          ),
-        ],
-      ),
+    if (!CourseListUtils.hasPreviewMedia(course)) {
+      return CoursePlaceholderThumbnail(
+        course: course,
+        width: CourseCard._thumbWidth,
+        height: CourseCard._thumbHeight,
+      );
+    }
+
+    return ThumbnailImage(
+      url: course.thumbnail,
+      videoUrl: course.previewVideoUrl,
+      width: CourseCard._thumbWidth,
+      height: CourseCard._thumbHeight,
+      borderRadius: 0,
+      fit: BoxFit.cover,
+      showMediaOverlay: true,
+      mediaOverlayIcon: Icons.play_arrow_rounded,
     );
   }
 }

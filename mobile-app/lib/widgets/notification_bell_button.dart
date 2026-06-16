@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/theme/themed_colors.dart';
 import '../providers/notification_provider.dart';
 
 class NotificationBellButton extends StatelessWidget {
@@ -10,6 +11,7 @@ class NotificationBellButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final unread = context.watch<NotificationProvider>().unreadCount;
 
     return Stack(
@@ -17,10 +19,10 @@ class NotificationBellButton extends StatelessWidget {
       children: [
         IconButton(
           onPressed: () => context.push('/notifications'),
-          icon: const Icon(Icons.notifications_none_rounded, color: AppColors.primary),
+          icon: Icon(Icons.notifications_none_rounded, color: AppColors.primary),
           style: IconButton.styleFrom(
-            backgroundColor: AppColors.surface,
-            side: const BorderSide(color: AppColors.border),
+            backgroundColor: c.surface,
+            side: BorderSide(color: c.border),
           ),
         ),
         if (unread > 0)
@@ -33,7 +35,7 @@ class NotificationBellButton extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.error,
                 borderRadius: BorderRadius.circular(99),
-                border: Border.all(color: AppColors.surface, width: 1.5),
+                border: Border.all(color: c.surface, width: 1.5),
               ),
               alignment: Alignment.center,
               child: Text(

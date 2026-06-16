@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../core/theme/app_colors.dart';
+import '../core/theme/themed_colors.dart';
 import '../models/course.dart';
 import 'thumbnail_image.dart';
 
@@ -9,14 +9,16 @@ class PurchaseDialog {
   PurchaseDialog._();
 
   static Future<void> show(BuildContext context, Course course) {
+    final c = context.colors;
     return showModalBottomSheet<void>(
       context: context,
       isScrollControlled: true,
-      backgroundColor: AppColors.surface,
+      backgroundColor: c.surface,
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (sheetContext) {
+        final c = sheetContext.colors;
         return SafeArea(
           child: Padding(
             padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
@@ -29,12 +31,12 @@ class PurchaseDialog {
                     width: 40,
                     height: 4,
                     decoration: BoxDecoration(
-                      color: AppColors.border,
+                      color: c.border,
                       borderRadius: BorderRadius.circular(99),
                     ),
                   ),
                 ),
-                const SizedBox(height: 20),
+                SizedBox(height: 20),
                 ClipRRect(
                   borderRadius: BorderRadius.circular(12),
                   child: ThumbnailImage(
@@ -43,15 +45,15 @@ class PurchaseDialog {
                     borderRadius: 0,
                   ),
                 ),
-                const SizedBox(height: 16),
-                const Text(
+                SizedBox(height: 16),
+                Text(
                   'Unlock this course',
                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.w800),
                 ),
-                const SizedBox(height: 8),
+                SizedBox(height: 8),
                 Text(
                   'Only the first video is free as a demo. Purchase to unlock all ${course.videoCount} videos in this course.',
-                  style: const TextStyle(color: AppColors.textSecondary, height: 1.5),
+                  style: TextStyle(color: c.textSecondary, height: 1.5),
                 ),
                 const SizedBox(height: 20),
                 SizedBox(

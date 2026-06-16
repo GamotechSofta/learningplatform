@@ -1,19 +1,9 @@
 import Category from "../models/category.js";
 import Course from "../models/course.js";
 import asyncHandler from "../middleware/asyncHandler.js";
-import { resolveCourseContent } from "../utils/courseContentResolver.js";
 import { resolveMediaUrl } from "../utils/mediaUrl.js";
-import {
-  applyCourseThumbnailFallbacks,
-  attachFallbackThumbnails,
-  pickVideoThumbnail,
-  pickVideoUrl,
-} from "../utils/courseThumbnail.js";
-import {
-  courseDataHasVerifiedPlayableVideos,
-  filterCoursesWithPlayableMedia,
-  pruneUnverifiedVideosFromCourseData,
-} from "../utils/coursePlayability.js";
+import { attachFallbackThumbnails } from "../utils/courseThumbnail.js";
+import { annotateCoursesWithPlayableMedia, getPlayableCourseIdSet } from "../utils/coursePlayability.js";
 import { isPaidCourse } from "../utils/courseAccess.js";
 
 export const createCategory = asyncHandler(async (req, res) => {
@@ -30,9 +20,36 @@ export const getCategories = asyncHandler(async (req, res) => {
     .sort({ order: 1, name: 1 })
     .populate("coursesCount");
 
+  const publishedOnly = req.query.published === "true";
+  let publishedCountMap = null;
+
+  if (publishedOnly && categories.length > 0) {
+    const categoryIds = categories.map((category) => category._id);
+    const publishedCourses = await Course.find({
+      category: { $in: categoryIds },
+      isPublished: true,
+    })
+      .select("_id category")
+      .lean();
+
+    const playableIds = await getPlayableCourseIdSet(
+      publishedCourses.map((course) => course._id)
+    );
+
+    publishedCountMap = {};
+    for (const course of publishedCourses) {
+      if (!playableIds.has(course._id.toString())) continue;
+      const catId = course.category.toString();
+      publishedCountMap[catId] = (publishedCountMap[catId] || 0) + 1;
+    }
+  }
+
   const data = categories.map((category) => {
     const output = category.toObject();
     output.thumbnail = resolveMediaUrl(output.thumbnail);
+    if (publishedCountMap) {
+      output.coursesCount = publishedCountMap[category._id.toString()] || 0;
+    }
     return output;
   });
 
@@ -41,6 +58,7 @@ export const getCategories = asyncHandler(async (req, res) => {
 
 export const searchCategories = asyncHandler(async (req, res) => {
   const { q } = req.query;
+  const publishedOnly = req.query.published === "true";
 
   if (!q?.trim()) {
     res.status(400);
@@ -50,27 +68,38 @@ export const searchCategories = asyncHandler(async (req, res) => {
   const term = q.trim();
   const regex = new RegExp(term, "i");
 
+  const categoryFilter = publishedOnly ? { isPublished: true } : {};
+
   let categories = await Category.find(
-    { $text: { $search: term } },
+    { ...categoryFilter, $text: { $search: term } },
     { score: { $meta: "textScore" } }
   ).sort({ score: { $meta: "textScore" } });
 
   if (categories.length === 0) {
     categories = await Category.find({
+      ...categoryFilter,
       $or: [{ name: regex }, { description: regex }, { slug: regex }],
     }).sort({ order: 1 });
   }
 
-  const matchingCourses = await Course.find({
+  const courseFilter = {
     $or: [{ title: regex }, { description: regex }, { slug: regex }],
-  }).select("title slug thumbnail level isPublished category");
+  };
+  if (publishedOnly) courseFilter.isPublished = true;
+
+  const matchingCourses = await Course.find(courseFilter).select(
+    "title slug thumbnail level isPublished category"
+  );
 
   const categoryIds = new Set([
     ...categories.map((c) => c._id.toString()),
     ...matchingCourses.map((c) => c.category?.toString()).filter(Boolean),
   ]);
 
-  const results = await Category.find({ _id: { $in: [...categoryIds] } })
+  const results = await Category.find({
+    _id: { $in: [...categoryIds] },
+    ...(publishedOnly ? { isPublished: true } : {}),
+  })
     .sort({ order: 1 })
     .populate("coursesCount")
     .populate({
@@ -82,8 +111,17 @@ export const searchCategories = asyncHandler(async (req, res) => {
   const data = [];
   for (const category of results) {
     const categoryData = category.toObject();
-    const published = (categoryData.courses || []).filter((course) => course.isPublished);
-    categoryData.courses = await filterCoursesWithPlayableMedia(published);
+    let courses = categoryData.courses || [];
+    if (publishedOnly) {
+      courses = courses.filter((course) => course.isPublished);
+    }
+    const annotated = publishedOnly
+      ? await annotateCoursesWithPlayableMedia(courses)
+      : courses;
+    categoryData.courses = publishedOnly
+      ? annotated.filter((course) => course.hasPlayableVideos !== false)
+      : annotated;
+    if (publishedOnly && categoryData.courses.length === 0) continue;
     data.push(categoryData);
   }
 
@@ -131,10 +169,14 @@ export const getCoursesByCategory = asyncHandler(async (req, res) => {
     .sort({ createdAt: -1 });
 
   const withThumbs = await attachFallbackThumbnails(courses);
+  const annotated =
+    req.query.published === "true"
+      ? await annotateCoursesWithPlayableMedia(withThumbs)
+      : withThumbs;
   const data =
     req.query.published === "true"
-      ? await filterCoursesWithPlayableMedia(withThumbs)
-      : withThumbs;
+      ? annotated.filter((course) => course.hasPlayableVideos !== false)
+      : annotated;
   res.json({ success: true, count: data.length, data });
 });
 
@@ -159,7 +201,10 @@ export const getCategoryFull = asyncHandler(async (req, res) => {
   const category = await Category.findById(req.params.id).populate({
     path: "courses",
     options: { sort: { createdAt: -1 } },
-    populate: { path: "instructor", select: "name email" },
+    populate: [
+      { path: "instructor", select: "name email" },
+      { path: "category", select: "name slug" },
+    ],
   });
 
   if (!category) {
@@ -168,32 +213,26 @@ export const getCategoryFull = asyncHandler(async (req, res) => {
   }
 
   const categoryData = category.toObject();
-  const courses = [];
+  let courses = (categoryData.courses || []).map((course) => ({
+    ...course,
+    isPaid: isPaidCourse(course),
+  }));
 
-  for (const course of category.courses || []) {
-    const courseData = course.toObject();
-    courseData.lessons = await resolveCourseContent(course, { publishedOnly });
-    for (const lesson of courseData.lessons || []) {
-      lesson.videos = (lesson.videos || []).map((video) => ({
-        ...video,
-        videoUrl: pickVideoUrl(video),
-        thumbnail: pickVideoThumbnail(video),
-      }));
-    }
-
-    const enriched = applyCourseThumbnailFallbacks(courseData);
-    await pruneUnverifiedVideosFromCourseData(enriched);
-
-    const playable = await courseDataHasVerifiedPlayableVideos(enriched);
-    if (!publishedOnly || playable) {
-      enriched.isPaid = isPaidCourse(enriched);
-      enriched.hasPlayableVideos = playable;
-      if (playable) courses.push(enriched);
-    }
+  if (publishedOnly) {
+    courses = courses.filter((course) => course.isPublished);
   }
 
+  const withThumbs = await attachFallbackThumbnails(courses);
   categoryData.thumbnail = resolveMediaUrl(categoryData.thumbnail);
-  categoryData.courses = courses;
+  const annotated = publishedOnly
+    ? await annotateCoursesWithPlayableMedia(withThumbs)
+    : withThumbs;
+  categoryData.courses = publishedOnly
+    ? annotated.filter((course) => course.hasPlayableVideos !== false)
+    : annotated;
+  if (publishedOnly) {
+    categoryData.coursesCount = categoryData.courses.length;
+  }
 
   res.json({ success: true, data: categoryData });
 });

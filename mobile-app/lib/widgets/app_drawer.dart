@@ -3,7 +3,10 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/theme/themed_colors.dart';
 import '../providers/auth_provider.dart';
+import '../providers/theme_provider.dart';
+import '../providers/video_engagement_provider.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key, required this.onSelectTab});
@@ -17,7 +20,10 @@ class AppDrawer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final auth = context.watch<AuthProvider>();
+    final theme = context.watch<ThemeProvider>();
+    final downloadCount = context.watch<VideoEngagementProvider>().downloadCount;
 
     return Drawer(
       child: SafeArea(
@@ -29,7 +35,7 @@ class AppDrawer extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'Vidyank',
                     style: TextStyle(
                       fontSize: 24,
@@ -37,10 +43,10 @@ class AppDrawer extends StatelessWidget {
                       color: AppColors.primary,
                     ),
                   ),
-                  const SizedBox(height: 4),
+                  SizedBox(height: 4),
                   Text(
                     auth.isAuthenticated ? auth.user!.email : 'Sign in to continue',
-                    style: const TextStyle(color: AppColors.textSecondary),
+                    style: TextStyle(color: c.textSecondary),
                   ),
                 ],
               ),
@@ -67,6 +73,23 @@ class AppDrawer extends StatelessWidget {
               onTap: () => _closeAndSelect(context, 3),
             ),
             ListTile(
+              leading: const Icon(Icons.download_rounded),
+              title: const Text('Downloaded videos'),
+              trailing: downloadCount > 0
+                  ? Text(
+                      '$downloadCount',
+                      style: TextStyle(
+                        color: c.textSecondary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    )
+                  : null,
+              onTap: () {
+                Navigator.pop(context);
+                context.push('/downloads');
+              },
+            ),
+            ListTile(
               leading: const Icon(Icons.person_outline),
               title: const Text('Profile'),
               onTap: () => _closeAndSelect(context, 4),
@@ -78,6 +101,14 @@ class AppDrawer extends StatelessWidget {
                 Navigator.pop(context);
                 context.push('/notifications');
               },
+            ),
+            const Divider(height: 1),
+            ListTile(
+              leading: Icon(
+                theme.isDark ? Icons.light_mode_outlined : Icons.dark_mode_outlined,
+              ),
+              title: Text(theme.isDark ? 'Light mode' : 'Dark mode'),
+              onTap: () => context.read<ThemeProvider>().toggle(),
             ),
             const Spacer(),
             if (auth.isAuthenticated) ...[

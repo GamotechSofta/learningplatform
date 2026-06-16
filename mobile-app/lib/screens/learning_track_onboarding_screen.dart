@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../core/constants/learning_tracks.dart';
 import '../core/theme/app_colors.dart';
+import '../core/theme/themed_colors.dart';
 import '../providers/auth_provider.dart';
 
 class LearningTrackOnboardingScreen extends StatefulWidget {
@@ -32,11 +33,12 @@ class _LearningTrackOnboardingScreenState
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final auth = context.watch<AuthProvider>();
     final firstName = auth.user?.name.split(' ').first ?? 'there';
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -48,19 +50,19 @@ class _LearningTrackOnboardingScreenState
                 children: [
                   Text(
                     'Hi $firstName 👋',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
+                      color: c.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  const Text(
+                  SizedBox(height: 8),
+                  Text(
                     'Which standard or goal are you preparing for? We\'ll recommend the best courses on your home page.',
                     style: TextStyle(
                       fontSize: 15,
                       height: 1.45,
-                      color: AppColors.textSecondary,
+                      color: c.textSecondary,
                     ),
                   ),
                 ],
@@ -115,8 +117,9 @@ class _TrackCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Material(
-      color: selected ? AppColors.primaryLight : AppColors.surface,
+      color: selected ? c.primaryTint : c.surface,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         onTap: enabled ? onTap : null,
@@ -126,7 +129,7 @@ class _TrackCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: selected ? AppColors.primary : AppColors.border,
+              color: selected ? AppColors.primary : c.border,
               width: selected ? 1.5 : 1,
             ),
           ),
@@ -141,25 +144,25 @@ class _TrackCard extends StatelessWidget {
                 ),
                 child: Icon(option.icon, color: AppColors.primary),
               ),
-              const SizedBox(width: 14),
+              SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       option.title,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: c.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Text(
                       option.subtitle,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: AppColors.textSecondary,
+                        color: c.textSecondary,
                         height: 1.3,
                       ),
                     ),
@@ -168,7 +171,7 @@ class _TrackCard extends StatelessWidget {
               ),
               Icon(
                 Icons.chevron_right_rounded,
-                color: selected ? AppColors.primary : AppColors.textSecondary,
+                color: selected ? AppColors.primary : c.textSecondary,
               ),
             ],
           ),

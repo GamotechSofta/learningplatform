@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/learning_tracks.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/themed_colors.dart';
 
 class HomeLearningSnapshot extends StatelessWidget {
   const HomeLearningSnapshot({
@@ -21,6 +22,7 @@ class HomeLearningSnapshot extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final trackLabel = learningTrack != null && learningTrack!.isNotEmpty
         ? LearningTracks.label(learningTrack)
         : null;
@@ -30,12 +32,11 @@ class HomeLearningSnapshot extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: c.surface,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: c.border),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
+            BoxShadow(color: c.cardShadow,
               blurRadius: 12,
               offset: const Offset(0, 4),
             ),
@@ -49,17 +50,17 @@ class HomeLearningSnapshot extends StatelessWidget {
                 Container(
                   padding: const EdgeInsets.all(8),
                   decoration: BoxDecoration(
-                    color: AppColors.primaryLight,
+                    color: c.primaryTint,
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.insights_rounded,
                     color: AppColors.primary,
                     size: 20,
                   ),
                 ),
-                const SizedBox(width: 10),
-                const Expanded(
+                SizedBox(width: 10),
+                Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
@@ -68,7 +69,7 @@ class HomeLearningSnapshot extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 15,
                           fontWeight: FontWeight.w800,
-                          color: AppColors.textPrimary,
+                          color: c.textPrimary,
                         ),
                       ),
                       SizedBox(height: 2),
@@ -76,7 +77,7 @@ class HomeLearningSnapshot extends StatelessWidget {
                         'Track progress across your enrolled courses',
                         style: TextStyle(
                           fontSize: 12,
-                          color: AppColors.textSecondary,
+                          color: c.textSecondary,
                         ),
                       ),
                     ],
@@ -90,16 +91,16 @@ class HomeLearningSnapshot extends StatelessWidget {
                       minimumSize: Size.zero,
                       tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                     ),
-                    child: const Text('View all'),
+                    child: Text('View all'),
                   ),
               ],
             ),
             if (trackLabel != null && learningTrack != LearningTracks.exploreAll) ...[
-              const SizedBox(height: 12),
+              SizedBox(height: 12),
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryLight,
+                  color: c.primaryTint,
                   borderRadius: BorderRadius.circular(99),
                 ),
                 child: Row(
@@ -167,35 +168,36 @@ class _MetricTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       decoration: BoxDecoration(
-        color: AppColors.background,
+        color: c.background,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: AppColors.borderLight),
+        border: Border.all(color: c.borderLight),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Icon(icon, size: 18, color: AppColors.textSecondary),
-          const SizedBox(height: 8),
+          Icon(icon, size: 18, color: c.textSecondary),
+          SizedBox(height: 8),
           Text(
             value,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.w800,
-              color: AppColors.textPrimary,
+              color: c.textPrimary,
             ),
           ),
-          const SizedBox(height: 2),
+          SizedBox(height: 2),
           Text(
             label,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 10,
               fontWeight: FontWeight.w600,
-              color: AppColors.textSecondary,
+              color: c.textSecondary,
               height: 1.2,
             ),
           ),

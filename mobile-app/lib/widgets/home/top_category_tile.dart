@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../core/constants/category_visuals.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/themed_colors.dart';
 import '../../models/category.dart';
 
 class TopCategoryTile extends StatelessWidget {
@@ -16,6 +17,7 @@ class TopCategoryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final visual = categoryVisual(category);
 
     return GestureDetector(
@@ -29,12 +31,11 @@ class TopCategoryTile extends StatelessWidget {
               height: 72,
               clipBehavior: Clip.antiAlias,
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: c.surface,
                 borderRadius: BorderRadius.circular(18),
-                border: Border.all(color: AppColors.border),
+                border: Border.all(color: c.border),
                 boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: 0.04),
+                  BoxShadow(color: c.cardShadow,
                     blurRadius: 6,
                     offset: const Offset(0, 2),
                   ),
@@ -57,16 +58,16 @@ class TopCategoryTile extends StatelessWidget {
                     )
                   : Icon(visual.icon, color: AppColors.primary, size: 32),
             ),
-            const SizedBox(height: 10),
+            SizedBox(height: 10),
             Text(
               category.name,
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
+              style: TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
+                color: c.textPrimary,
                 height: 1.2,
               ),
             ),
