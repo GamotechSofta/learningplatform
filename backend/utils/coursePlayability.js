@@ -3,6 +3,14 @@ import Video from "../models/video.js";
 import { readObjectRange } from "./s3.js";
 import { looksLikeValidVideo } from "./videoIntegrity.js";
 
+/** Mongo filter: video has some playable source (incl. legacy stored videoUrl). */
+export const PLAYABLE_MEDIA_OR = [
+  { videoKey: { $exists: true, $nin: [null, ""] } },
+  { externalUrl: { $exists: true, $nin: [null, ""] } },
+  { hlsKey: { $exists: true, $nin: [null, ""] } },
+  { videoUrl: { $exists: true, $nin: [null, ""] } },
+];
+
 const integrityCache = new Map();
 const CACHE_TTL_MS = 60 * 60 * 1000;
 
@@ -122,11 +130,7 @@ export const getPlayableCourseIdSet = async (courseIds) => {
     lesson: { $in: lessons.map((lesson) => lesson._id) },
     isPublished: true,
     mediaValid: { $ne: false },
-    $or: [
-      { videoKey: { $exists: true, $nin: [null, ""] } },
-      { externalUrl: { $exists: true, $nin: [null, ""] } },
-      { hlsKey: { $exists: true, $nin: [null, ""] } },
-    ],
+    $or: PLAYABLE_MEDIA_OR,
   })
     .select("_id lesson")
     .lean();

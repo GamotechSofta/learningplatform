@@ -12,6 +12,7 @@ import {
   annotateCoursesWithPlayableMedia,
   courseDataHasPlayableVideos,
   filterUnplayableVideosFromCourseData,
+  PLAYABLE_MEDIA_OR,
 } from "../utils/coursePlayability.js";
 import {
   applyCourseThumbnailFallbacks,
@@ -53,11 +54,7 @@ const attachVideoCounts = async (courses) => {
         "lessonDoc.course": { $in: courseIds },
         isPublished: true,
         mediaValid: { $ne: false },
-        $or: [
-          { videoKey: { $exists: true, $nin: [null, ""] } },
-          { externalUrl: { $exists: true, $nin: [null, ""] } },
-          { hlsKey: { $exists: true, $nin: [null, ""] } },
-        ],
+        $or: PLAYABLE_MEDIA_OR,
       },
     },
     {
