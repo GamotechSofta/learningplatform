@@ -123,6 +123,10 @@ const resolveVideoContentType = (fileName, contentType) => {
     ".avi": "video/x-msvideo",
     ".mkv": "video/x-matroska",
     ".m4v": "video/x-m4v",
+    ".ts": "video/mp2t",
+    ".m2ts": "video/mp2t",
+    ".mpeg": "video/mpeg",
+    ".mpg": "video/mpeg",
   };
   return map[ext] || "video/mp4";
 };

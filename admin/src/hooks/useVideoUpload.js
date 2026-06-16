@@ -5,6 +5,7 @@ import {
   initMultipartUpload,
   presignPart,
 } from "../services/videoService";
+import { resolveVideoContentType } from "../utils/videoFileName";
 
 const MAX_PART_RETRIES = 3;
 const DEFAULT_CONCURRENCY = 3;
@@ -270,7 +271,7 @@ export default function useVideoUpload({ concurrency = DEFAULT_CONCURRENCY } = {
 
         initMultipartUpload({
           fileName: file.name,
-          contentType: file.type || "video/mp4",
+          contentType: resolveVideoContentType(file),
           fileSize: file.size,
         })
           .then(({ uploadId, key, partSize }) => {

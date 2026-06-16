@@ -18,6 +18,8 @@ const VIDEO_EXTENSIONS = new Set([
   ".avi",
   ".mkv",
   ".m4v",
+  ".ts",
+  ".m2ts",
 ]);
 
 /**

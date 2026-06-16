@@ -98,7 +98,7 @@ export const completeVideoMultipartUpload = asyncHandler(async (req, res) => {
     await deleteFromS3(key);
     res.status(400);
     throw new Error(
-      "Uploaded file is not a valid video (corrupt or wrong format). Please re-upload the original MP4/WebM file."
+      "Uploaded file is not a valid video (corrupt or wrong format). Please re-upload the original MP4, WebM, or TS file."
     );
   }
 

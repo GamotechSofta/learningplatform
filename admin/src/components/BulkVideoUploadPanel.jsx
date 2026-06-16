@@ -5,6 +5,7 @@ import { createVideo } from "../services/videoService";
 import {
   filterAndSortVideoFiles,
   titleFromFileName,
+  VIDEO_ACCEPT,
 } from "../utils/videoFileName";
 
 const formatBytes = (bytes) => {
@@ -63,7 +64,7 @@ export default function BulkVideoUploadPanel({
   const addFiles = (fileList) => {
     const videos = filterAndSortVideoFiles(fileList);
     if (!videos.length) {
-      setError("No video files found. Supported: MP4, WebM, MOV, AVI, MKV, M4V.");
+      setError("No video files found. Supported: MP4, WebM, MOV, AVI, MKV, M4V, MPEG, MPG, TS, M2TS.");
       return;
     }
 
@@ -242,7 +243,7 @@ export default function BulkVideoUploadPanel({
         <input
           ref={filesInputRef}
           type="file"
-          accept="video/*"
+          accept={VIDEO_ACCEPT}
           multiple
           className="hidden"
           disabled={disabled || running}
@@ -254,7 +255,6 @@ export default function BulkVideoUploadPanel({
         <input
           ref={folderInputRef}
           type="file"
-          accept="video/*"
           multiple
           className="hidden"
           disabled={disabled || running}
@@ -262,8 +262,7 @@ export default function BulkVideoUploadPanel({
             addFiles(e.target.files);
             e.target.value = "";
           }}
-          // Non-standard but widely supported for folder selection.
-          webkitDirectory
+          webkitdirectory=""
         />
       </div>
 

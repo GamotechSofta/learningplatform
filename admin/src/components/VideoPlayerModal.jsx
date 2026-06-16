@@ -1,5 +1,38 @@
+import { useEffect, useRef } from "react";
+import mpegts from "mpegts.js";
+import { isTsVideoUrl, videoMimeFromUrl } from "../utils/videoFileName";
+
 export default function VideoPlayerModal({ video, onClose }) {
+  const videoRef = useRef(null);
+  const tsPlayerRef = useRef(null);
+
+  useEffect(() => {
+    if (!video?.videoUrl || !isTsVideoUrl(video.videoUrl)) return undefined;
+
+    const el = videoRef.current;
+    if (!el || !mpegts.isSupported()) return undefined;
+
+    const player = mpegts.createPlayer({
+      type: "mpegts",
+      isLive: false,
+      url: video.videoUrl,
+    });
+
+    player.attachMediaElement(el);
+    player.load();
+    player.play().catch(() => {});
+    tsPlayerRef.current = player;
+
+    return () => {
+      player.destroy();
+      tsPlayerRef.current = null;
+    };
+  }, [video?.videoUrl]);
+
   if (!video) return null;
+
+  const mimeType = videoMimeFromUrl(video.videoUrl);
+  const usesTsPlayer = isTsVideoUrl(video.videoUrl) && mpegts.isSupported();
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
@@ -22,12 +55,13 @@ export default function VideoPlayerModal({ video, onClose }) {
         </div>
         <div className="bg-black">
           <video
+            ref={videoRef}
             key={video.videoUrl}
             controls
             className="aspect-video w-full"
             poster={video.thumbnail || undefined}
           >
-            <source src={video.videoUrl} />
+            {!usesTsPlayer && <source src={video.videoUrl} type={mimeType} />}
             Your browser does not support video playback.
           </video>
         </div>

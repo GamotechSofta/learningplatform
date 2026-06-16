@@ -3,7 +3,7 @@ import ImageUpload from "./ImageUpload";
 import UploadCompleteModal from "./UploadCompleteModal";
 import useVideoUpload from "../hooks/useVideoUpload";
 import { createVideo } from "../services/videoService";
-import { titleFromFileName } from "../utils/videoFileName";
+import { titleFromFileName, VIDEO_ACCEPT } from "../utils/videoFileName";
 
 const emptyForm = {
   title: "",
@@ -206,7 +206,7 @@ export default function VideoUploadPanel({ lessonId, order = 0, disabled = false
             <input
               ref={fileInputRef}
               type="file"
-              accept="video/*"
+              accept={VIDEO_ACCEPT}
               disabled={disabled || upload.isActive}
               onChange={(e) => {
                 const selected = e.target.files?.[0] || null;
