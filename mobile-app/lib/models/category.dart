@@ -1,4 +1,3 @@
-import '../core/utils/course_playability.dart';
 import '../core/utils/media_url.dart';
 import 'course.dart';
 
@@ -32,11 +31,14 @@ class Category {
                 includeAllPlayable: true,
               ),
             )
-            .where((c) => c.isPublished)
+            .where(
+              (c) => c.isPublished && c.hasPlayableVideos != false,
+            )
             .toList()
         : <Course>[];
 
-    final listable = CoursePlayability.filterListable(courses);
+    final nestedCount = courses.length;
+    final apiCount = (json['coursesCount'] as num?)?.toInt();
 
     return Category(
       id: json['_id']?.toString() ?? '',
@@ -44,8 +46,8 @@ class Category {
       slug: json['slug']?.toString() ?? '',
       description: json['description']?.toString(),
       thumbnail: MediaUrl.resolve(json['thumbnail']?.toString()),
-      coursesCount: listable.length,
-      courses: listable,
+      coursesCount: nestedCount > 0 ? nestedCount : (apiCount ?? 0),
+      courses: courses,
     );
   }
 }

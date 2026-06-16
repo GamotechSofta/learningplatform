@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/theme/themed_colors.dart';
 import '../core/utils/api_errors.dart';
 import '../core/utils/post_auth_sync.dart';
 import '../providers/auth_provider.dart';
@@ -10,6 +11,7 @@ import '../providers/learning_progress_provider.dart';
 import '../providers/notification_provider.dart';
 import '../providers/saved_courses_provider.dart';
 import '../providers/subscription_provider.dart';
+import '../providers/video_engagement_provider.dart';
 import '../widgets/auth/auth_screen_layout.dart';
 import '../widgets/auth/auth_text_field.dart';
 
@@ -54,6 +56,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       final progress = context.read<LearningProgressProvider>();
       final notifications = context.read<NotificationProvider>();
       final saved = context.read<SavedCoursesProvider>();
+      final engagement = context.read<VideoEngagementProvider>();
 
       await auth.register(
         _nameController.text.trim(),
@@ -67,6 +70,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         progress: progress,
         notifications: notifications,
         saved: saved,
+        engagement: engagement,
       );
 
       if (mounted) {
@@ -88,6 +92,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return AuthScreenLayout(
       title: 'Join ',
       titleHighlight: 'Vidyank',
@@ -120,7 +125,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               validator: (value) =>
                   value == null || value.trim().isEmpty ? 'Name is required' : null,
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             AuthTextField(
               controller: _emailController,
               label: 'Email Address',
@@ -128,7 +133,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               validator: (value) =>
                   value == null || value.trim().isEmpty ? 'Email is required' : null,
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             AuthTextField(
               controller: _passwordController,
               label: 'Password',
@@ -136,7 +141,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                  color: AppColors.textSecondary,
+                  color: c.textSecondary,
                 ),
                 onPressed: () => setState(() => _obscurePassword = !_obscurePassword),
               ),
@@ -144,7 +149,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ? 'Password must be at least 6 characters'
                   : null,
             ),
-            const SizedBox(height: 18),
+            SizedBox(height: 18),
             AuthTextField(
               controller: _confirmController,
               label: 'Confirm Password',
@@ -152,7 +157,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               suffixIcon: IconButton(
                 icon: Icon(
                   _obscureConfirm ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                  color: AppColors.textSecondary,
+                  color: c.textSecondary,
                 ),
                 onPressed: () => setState(() => _obscureConfirm = !_obscureConfirm),
               ),

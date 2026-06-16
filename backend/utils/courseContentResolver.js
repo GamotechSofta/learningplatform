@@ -20,11 +20,13 @@ const STOP_WORDS = new Set([
   "coding",
 ]);
 
-const hasPlayableVideo = (video) => {
+export const videoHasUsableMedia = (video) => {
   const doc = video?.toObject ? video.toObject() : video;
   if (doc?.mediaValid === false) return false;
-  return Boolean(doc?.videoKey || doc?.externalUrl || doc?.videoUrl);
+  return Boolean(doc?.videoKey || doc?.externalUrl || doc?.hlsKey || doc?.videoUrl);
 };
+
+const hasPlayableVideo = (video) => videoHasUsableMedia(video);
 
 const includeVideo = (video, publishedOnly) => {
   if (!hasPlayableVideo(video)) return false;
@@ -98,6 +100,42 @@ const findOrphanVideos = async (validLessonIds) => {
     if (!video.lesson) return true;
     return !validLessonIds.has(video.lesson.toString());
   });
+};
+
+/**
+ * Admin-style resolver: only this course's lessons and their linked videos.
+ * Used for mobile/public catalog so content matches the admin curriculum view.
+ */
+export const resolveCourseContentDirect = async (course, { publishedOnly = false } = {}) => {
+  const lessons = await Lesson.find({ course: course._id }).sort({ order: 1 });
+  if (!lessons.length) return [];
+
+  const videoFilter = { lesson: { $in: lessons.map((lesson) => lesson._id) } };
+  if (publishedOnly) videoFilter.isPublished = true;
+
+  const videos = await Video.find(videoFilter).sort({ order: 1 });
+  const videosByLessonId = new Map();
+
+  for (const video of videos) {
+    if (!hasPlayableVideo(video)) continue;
+    const key = video.lesson.toString();
+    if (!videosByLessonId.has(key)) videosByLessonId.set(key, []);
+    videosByLessonId.get(key).push(video.toObject());
+  }
+
+  const resolvedLessons = [];
+  for (const lesson of lessons) {
+    const lessonVideos = videosByLessonId.get(lesson._id.toString()) || [];
+    if (publishedOnly && lessonVideos.length === 0) continue;
+    if (!publishedOnly && lessonVideos.length === 0 && !lesson.isPublished) continue;
+
+    resolvedLessons.push({
+      ...lesson.toObject(),
+      videos: lessonVideos,
+    });
+  }
+
+  return resolvedLessons;
 };
 
 /**

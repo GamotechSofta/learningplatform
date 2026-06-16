@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../core/theme/app_colors.dart';
+import '../core/theme/themed_colors.dart';
 import '../models/category.dart';
 import 'thumbnail_image.dart';
 
@@ -16,6 +16,7 @@ class CategoryCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Card(
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -43,13 +44,13 @@ class CategoryCard extends StatelessWidget {
                         ),
                   ),
                   if (category.description != null && category.description!.isNotEmpty) ...[
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     Text(
                       category.description!,
                       maxLines: 2,
                       overflow: TextOverflow.ellipsis,
                       style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                            color: AppColors.textSecondary,
+                            color: c.textSecondary,
                           ),
                     ),
                   ],

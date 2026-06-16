@@ -8,6 +8,8 @@ import {
   UploadPartCommand,
   CompleteMultipartUploadCommand,
   AbortMultipartUploadCommand,
+  ListObjectsV2Command,
+  DeleteObjectsCommand,
 } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 
@@ -278,4 +280,123 @@ export const deleteFromS3 = async (key) => {
       Key: key,
     })
   );
+};
+
+/**
+ * Download a full S3 object to a local file (used for HLS transcoding).
+ */
+export const downloadObjectToFile = async (key, destPath) => {
+  if (!key || /^https?:\/\//i.test(key)) {
+    throw new Error("Invalid S3 key");
+  }
+
+  const fs = await import("fs");
+  const { pipeline } = await import("stream/promises");
+
+  const bucket = getBucket();
+  const response = await getS3Client().send(
+    new GetObjectCommand({
+      Bucket: bucket,
+      Key: key,
+    })
+  );
+
+  await pipeline(response.Body, fs.createWriteStream(destPath));
+};
+
+/**
+ * Upload a local file to S3 with an explicit content type.
+ */
+export const uploadLocalFileToS3 = async (localPath, key, contentType) => {
+  const fs = await import("fs");
+  const bucket = getBucket();
+  const body = fs.createReadStream(localPath);
+
+  await getS3Client().send(
+    new PutObjectCommand({
+      Bucket: bucket,
+      Key: key,
+      Body: body,
+      ContentType: contentType,
+    })
+  );
+
+  return { key, url: getPublicUrl(key) };
+};
+
+const hlsContentType = (fileName) => {
+  const lower = fileName.toLowerCase();
+  if (lower.endsWith(".m3u8")) return "application/vnd.apple.mpegurl";
+  if (lower.endsWith(".ts")) return "video/mp2t";
+  if (lower.endsWith(".m4s")) return "video/iso.segment";
+  return "application/octet-stream";
+};
+
+/**
+ * Upload every file under a local directory to an S3 prefix.
+ */
+export const uploadDirectoryToS3 = async (localDir, s3Prefix) => {
+  const fs = await import("fs");
+  const path = await import("path");
+
+  const normalizedPrefix = String(s3Prefix).replace(/^\/+|\/+$/g, "");
+  const entries = fs.readdirSync(localDir, { withFileTypes: true });
+  const uploaded = [];
+
+  for (const entry of entries) {
+    const localPath = path.join(localDir, entry.name);
+    if (entry.isDirectory()) {
+      const nested = await uploadDirectoryToS3(
+        localPath,
+        `${normalizedPrefix}/${entry.name}`
+      );
+      uploaded.push(...nested);
+      continue;
+    }
+
+    const key = `${normalizedPrefix}/${entry.name}`;
+    const result = await uploadLocalFileToS3(
+      localPath,
+      key,
+      hlsContentType(entry.name)
+    );
+    uploaded.push(result);
+  }
+
+  return uploaded;
+};
+
+/**
+ * Delete all objects under an S3 prefix (used when removing HLS renditions).
+ */
+export const deleteObjectsByPrefix = async (prefix) => {
+  if (!prefix) return;
+  const bucket = getBucket();
+  const normalizedPrefix = String(prefix).replace(/^\/+/, "");
+  let continuationToken;
+
+  do {
+    const list = await getS3Client().send(
+      new ListObjectsV2Command({
+        Bucket: bucket,
+        Prefix: normalizedPrefix,
+        ContinuationToken: continuationToken,
+      })
+    );
+
+    const keys = (list.Contents || [])
+      .map((item) => item.Key)
+      .filter(Boolean);
+
+    if (keys.length > 0) {
+      await getS3Client().send(
+        new DeleteObjectsCommand({
+          Bucket: bucket,
+          Delete: { Objects: keys.map((Key) => ({ Key })) },
+        })
+      );
+    }
+
+    continuationToken = list.IsTruncated ? list.NextContinuationToken : undefined;
+  } while (continuationToken);
 };

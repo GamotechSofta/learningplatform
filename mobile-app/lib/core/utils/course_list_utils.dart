@@ -19,9 +19,13 @@ class CourseListUtils {
     return thumb != null && thumb.isNotEmpty;
   }
 
-  /// Hide courses whose videos are corrupt or missing on the server.
-  static bool hasPlayableVideos(Course course) =>
-      CoursePlayability.isListable(course);
+  static bool hasPreviewMedia(Course course) {
+    return hasBanner(course) ||
+        (course.previewVideoUrl != null && course.previewVideoUrl!.isNotEmpty);
+  }
+
+  /// Published courses with playable media from admin.
+  static bool isPublishedCourse(Course course) => CoursePlayability.isListable(course);
 
   static List<Course> filterAndSort({
     required List<Course> courses,
@@ -30,11 +34,12 @@ class CourseListUtils {
     String? level,
     CoursePriceFilter priceFilter = CoursePriceFilter.all,
     CourseSortOption sort = CourseSortOption.featured,
+    bool prioritizeThumbnails = true,
   }) {
     final normalizedQuery = query.trim().toLowerCase();
 
     final filtered = courses.where((course) {
-      if (!hasPlayableVideos(course)) return false;
+      if (!CoursePlayability.isListable(course)) return false;
 
       if (categoryId != null && course.categoryId != categoryId) return false;
 
@@ -59,16 +64,23 @@ class CourseListUtils {
       return haystack.contains(normalizedQuery);
     }).toList();
 
-    filtered.sort((a, b) => _compare(a, b, sort));
+    filtered.sort((a, b) => _compare(a, b, sort, prioritizeThumbnails));
     return filtered;
   }
 
-  static int _compare(Course a, Course b, CourseSortOption sort) {
+  static int _compare(
+    Course a,
+    Course b,
+    CourseSortOption sort,
+    bool prioritizeThumbnails,
+  ) {
     switch (sort) {
       case CourseSortOption.featured:
-        final bannerCompare =
-            (hasBanner(a) ? 0 : 1).compareTo(hasBanner(b) ? 0 : 1);
-        if (bannerCompare != 0) return bannerCompare;
+        if (prioritizeThumbnails) {
+          final bannerCompare =
+              (hasPreviewMedia(a) ? 0 : 1).compareTo(hasPreviewMedia(b) ? 0 : 1);
+          if (bannerCompare != 0) return bannerCompare;
+        }
         return a.title.toLowerCase().compareTo(b.title.toLowerCase());
       case CourseSortOption.nameAsc:
         return a.title.toLowerCase().compareTo(b.title.toLowerCase());

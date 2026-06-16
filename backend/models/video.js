@@ -58,6 +58,17 @@ const videoSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    // S3 key for adaptive HLS master playlist, e.g. "hls/1719000000-lesson/master.m3u8".
+    hlsKey: {
+      type: String,
+      trim: true,
+    },
+    // pending | processing | ready | failed | skipped
+    streamingStatus: {
+      type: String,
+      trim: true,
+      default: "pending",
+    },
   },
   { timestamps: true }
 );
@@ -77,6 +88,11 @@ videoSchema.virtual("videoUrl").get(function () {
 videoSchema.virtual("thumbnail").get(function () {
   if (this.thumbnailKey) return getPublicUrl(this.thumbnailKey);
   return this._doc?.thumbnail || "";
+});
+
+videoSchema.virtual("hlsUrl").get(function () {
+  if (this.hlsKey) return getPublicUrl(this.hlsKey);
+  return "";
 });
 
 videoSchema.set("toJSON", { virtuals: true });

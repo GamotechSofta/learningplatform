@@ -46,6 +46,8 @@ const stripLockedVideoMedia = (video) => {
   delete sanitized.videoUrl;
   delete sanitized.videoKey;
   delete sanitized.externalUrl;
+  delete sanitized.hlsUrl;
+  delete sanitized.hlsKey;
   return sanitized;
 };
 

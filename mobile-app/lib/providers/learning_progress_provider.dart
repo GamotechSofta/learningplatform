@@ -134,6 +134,20 @@ class LearningProgressProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> ensureCourseTotal({
+    required String userId,
+    required String courseId,
+    required int totalVideos,
+  }) async {
+    if (totalVideos <= 0) return;
+    if (_userId != userId) await loadForUser(userId);
+    if ((_courseTotals[courseId] ?? 0) > 0) return;
+
+    _courseTotals[courseId] = totalVideos;
+    await _service.saveCourseTotals(userId, _courseTotals);
+    notifyListeners();
+  }
+
   Future<CourseCertificate?> markVideoWatched({
     required String userId,
     required Course course,
@@ -185,7 +199,7 @@ class LearningProgressProvider extends ChangeNotifier {
     if (course.isPaid && !isPurchased) {
       final first = course.lessons
           .expand((lesson) => lesson.videos)
-          .where((video) => !video.isLocked && video.videoUrl.isNotEmpty)
+          .where((video) => video.hasPlayableSource)
           .map((video) => video.id)
           .firstOrNull;
       return first == null ? [] : [first];
@@ -193,7 +207,7 @@ class LearningProgressProvider extends ChangeNotifier {
 
     return course.lessons
         .expand((lesson) => lesson.videos)
-        .where((video) => !video.isLocked && video.videoUrl.isNotEmpty)
+        .where((video) => video.hasPlayableSource)
         .map((video) => video.id)
         .toList();
   }

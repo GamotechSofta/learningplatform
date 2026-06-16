@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/theme/themed_colors.dart';
 import '../core/utils/course_access.dart';
 import '../models/course.dart';
 import '../providers/auth_provider.dart';
@@ -41,9 +42,27 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
     if (!auth.isAuthenticated || auth.user == null) return;
 
     await Future.wait([
-      context.read<SubscriptionProvider>().refresh(auth.user!.id),
+      context.read<SubscriptionProvider>().refresh(
+            auth.user!.id,
+            forceRefresh: true,
+          ),
       context.read<LearningProgressProvider>().loadForUser(auth.user!.id),
     ]);
+
+    if (!mounted) return;
+
+    final subs = context.read<SubscriptionProvider>();
+    final progress = context.read<LearningProgressProvider>();
+    for (final sub in subs.activeSubscriptions) {
+      final count = sub.course.videoCount;
+      if (count > 0) {
+        await progress.ensureCourseTotal(
+          userId: auth.user!.id,
+          courseId: sub.course.id,
+          totalVideos: count,
+        );
+      }
+    }
   }
 
   Future<void> _resumeCourse(Course course) async {
@@ -52,7 +71,10 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
       final progress = context.read<LearningProgressProvider>();
       final subscriptionActive = subs.hasAccess(course.id);
 
-      final rawCourse = await widget.courseService.getCourseFull(course.id);
+      final rawCourse = await widget.courseService.getCourseFull(
+        course.id,
+        forceRefresh: subscriptionActive,
+      );
       final isPurchased = CourseAccess.isCoursePurchased(
         rawCourse,
         subscriptionActive: subscriptionActive,
@@ -85,11 +107,12 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final auth = context.watch<AuthProvider>();
 
     if (!auth.isAuthenticated) {
-      return const Scaffold(
-        backgroundColor: AppColors.background,
+      return Scaffold(
+        backgroundColor: c.background,
         body: SafeArea(
           child: EmptyState(
             title: 'Sign in to view your learning',
@@ -118,31 +141,31 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
     final activeList = _tabIndex == 0 ? inProgress : completed;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: SafeArea(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Padding(
+            Padding(
               padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
               child: Text(
                 'My Learning',
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.w800,
-                  color: AppColors.textPrimary,
+                  color: c.textPrimary,
                 ),
               ),
             ),
-            const SizedBox(height: 12),
+            SizedBox(height: 12),
             Padding(
               padding: const EdgeInsets.symmetric(horizontal: 20),
               child: Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: AppColors.surface,
+                  color: c.surface,
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: AppColors.border),
+                  border: Border.all(color: c.border),
                 ),
                 child: Row(
                   children: [
@@ -198,6 +221,7 @@ class _LearningTab extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
@@ -214,7 +238,7 @@ class _LearningTab extends StatelessWidget {
             style: TextStyle(
               fontWeight: FontWeight.w700,
               fontSize: 13,
-              color: selected ? Colors.white : AppColors.textSecondary,
+              color: selected ? Colors.white : c.textSecondary,
             ),
           ),
         ),

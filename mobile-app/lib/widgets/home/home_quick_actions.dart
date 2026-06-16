@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/themed_colors.dart';
 import '../../navigation/main_shell_scope.dart';
 
 class HomeQuickActions extends StatelessWidget {
@@ -76,6 +77,7 @@ class _QuickAction extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Material(
       color: Colors.transparent,
       child: InkWell(
@@ -84,9 +86,9 @@ class _QuickAction extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: c.surface,
             borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: c.border),
           ),
           child: Column(
             children: [
@@ -99,13 +101,13 @@ class _QuickAction extends StatelessWidget {
                 ),
                 child: Icon(icon, color: color, size: 22),
               ),
-              const SizedBox(height: 8),
+              SizedBox(height: 8),
               Text(
                 label,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 11,
                   fontWeight: FontWeight.w700,
-                  color: AppColors.textPrimary,
+                  color: c.textPrimary,
                 ),
               ),
             ],

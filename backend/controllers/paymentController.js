@@ -9,6 +9,7 @@ import {
   formatPayUAmount,
   generatePaymentHash,
   getPayUConfig,
+  normalizePayUPhone,
   sanitizePayUText,
   validateResponseHash,
   verifyPaymentWithPayU,
@@ -130,13 +131,14 @@ const buildPayUParamsForOrder = (order, user, course) => {
       productinfo,
       firstname,
       email,
-      phone: "9999999999",
+      phone: normalizePayUPhone(user?.phone),
       surl,
       furl,
       udf1,
       udf2,
       udf3,
       hash,
+      service_provider: "payu_paisa",
     },
   };
 };
@@ -287,6 +289,7 @@ export const launchPayUCheckout = asyncHandler(async (req, res) => {
   const checkout = buildPayUParamsForOrder(order, user, course);
 
   res.setHeader("Content-Type", "text/html; charset=utf-8");
+  res.setHeader("Cache-Control", "no-store");
   res.send(buildPayUFormHtml(checkout));
 });
 

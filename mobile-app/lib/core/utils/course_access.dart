@@ -29,7 +29,10 @@ class CourseAccess {
     bool subscriptionActive = false,
   }) {
     if (hasFullPlaybackAccess(course, subscriptionActive: subscriptionActive)) {
-      return course;
+      return _unlockAllVideos(
+        course,
+        subscriptionActive: subscriptionActive,
+      );
     }
 
     var previewGranted = false;
@@ -39,14 +42,16 @@ class CourseAccess {
       }
 
       final videos = lesson.videos.map((video) {
-        if (!previewGranted && video.videoUrl.isNotEmpty) {
+        if (!previewGranted && video.hasPlayableSource) {
           previewGranted = true;
           return video.copyWith(isLocked: false);
         }
         return video.copyWith(
           isLocked: true,
           previewVideoUrl: video.previewVideoUrl ??
-              (video.videoUrl.isNotEmpty ? video.videoUrl : null),
+              (video.videoUrl.isNotEmpty
+                  ? video.videoUrl
+                  : video.hlsUrl),
           videoUrl: '',
         );
       }).toList();
@@ -84,10 +89,62 @@ class CourseAccess {
     );
   }
 
+  static Course _unlockAllVideos(
+    Course course, {
+    bool subscriptionActive = false,
+  }) {
+    final lessons = course.lessons.map((lesson) {
+      final videos = lesson.videos.map((video) {
+        final playbackUrl = video.videoUrl.isNotEmpty
+            ? video.videoUrl
+            : (video.previewVideoUrl ?? '');
+        return video.copyWith(
+          isLocked: false,
+          videoUrl: playbackUrl,
+        );
+      }).toList();
+
+      return Lesson(
+        id: lesson.id,
+        title: lesson.title,
+        order: lesson.order,
+        description: lesson.description,
+        isFree: lesson.isFree,
+        isPublished: lesson.isPublished,
+        videos: videos,
+      );
+    }).toList();
+
+    final playableCount =
+        lessons.fold<int>(0, (sum, lesson) => sum + lesson.videos.length);
+
+    return Course(
+      id: course.id,
+      title: course.title,
+      slug: course.slug,
+      description: course.description,
+      thumbnail: course.thumbnail,
+      previewVideoUrl: course.previewVideoUrl,
+      categoryId: course.categoryId,
+      categoryName: course.categoryName,
+      level: course.level,
+      isPublished: course.isPublished,
+      pricing: course.pricing,
+      instructorName: course.instructorName,
+      lessons: lessons,
+      videoCount: playableCount > 0 ? playableCount : course.videoCount,
+      isPaid: course.isPaid,
+      hasAccess: true,
+      hasPurchased: course.hasPurchased || subscriptionActive,
+      previewVideoCount: course.previewVideoCount,
+      hasPlayableVideos: course.hasPlayableVideos,
+    );
+  }
+
   static String? firstPlayableVideoId(Course course) {
     for (final lesson in course.lessons) {
       for (final video in lesson.videos) {
-        if (!video.isLocked && video.videoUrl.isNotEmpty) return video.id;
+        if (!video.isLocked && video.hasPlayableSource) return video.id;
       }
     }
     return null;
@@ -105,7 +162,7 @@ class CourseAccess {
     for (final lesson in locked.lessons) {
       for (final video in lesson.videos) {
         if (video.id == videoId) {
-          return !video.isLocked && video.videoUrl.isNotEmpty;
+          return !video.isLocked && video.hasPlayableSource;
         }
       }
     }

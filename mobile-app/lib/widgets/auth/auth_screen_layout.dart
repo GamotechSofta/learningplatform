@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../config/app_config.dart';
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/themed_colors.dart';
 
 class AuthScreenLayout extends StatelessWidget {
   const AuthScreenLayout({
@@ -25,8 +26,9 @@ class AuthScreenLayout extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: SafeArea(
         top: false,
         child: Column(
@@ -43,12 +45,12 @@ class AuthScreenLayout extends StatelessWidget {
                         margin: const EdgeInsets.symmetric(horizontal: 0),
                         padding: const EdgeInsets.fromLTRB(28, 32, 28, 24),
                         decoration: BoxDecoration(
-                          color: AppColors.surface,
+                          color: c.surface,
                           borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
-                          border: Border.all(color: AppColors.border),
+                          border: Border.all(color: c.border),
                           boxShadow: [
                             BoxShadow(
-                              color: AppColors.primary.withValues(alpha: 0.12),
+                              color: c.glowShadow,
                               blurRadius: 24,
                               offset: const Offset(0, -4),
                             ),
@@ -61,18 +63,18 @@ class AuthScreenLayout extends StatelessWidget {
                               title: title,
                               highlight: titleHighlight,
                             ),
-                            const SizedBox(height: 12),
+                            SizedBox(height: 12),
                             Text(
                               subtitle,
                               textAlign: TextAlign.center,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
-                                color: AppColors.textSecondary,
+                                color: c.textSecondary,
                                 height: 1.55,
                                 fontWeight: FontWeight.w500,
                               ),
                             ),
-                            const SizedBox(height: 28),
+                            SizedBox(height: 28),
                             child,
                           ],
                         ),
@@ -85,8 +87,8 @@ class AuthScreenLayout extends StatelessWidget {
                         children: [
                           Text(
                             footerText,
-                            style: const TextStyle(
-                              color: AppColors.textSecondary,
+                            style: TextStyle(
+                              color: c.textSecondary,
                               fontSize: 14,
                             ),
                           ),
@@ -206,12 +208,13 @@ class AuthWelcomeTitle extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Column(
       children: [
         RichText(
           textAlign: TextAlign.center,
           text: TextSpan(
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 28,
               fontWeight: FontWeight.w900,
               height: 1.15,
@@ -220,7 +223,11 @@ class AuthWelcomeTitle extends StatelessWidget {
             children: [
               TextSpan(
                 text: title,
-                style: const TextStyle(color: AppColors.authBlue),
+                style: TextStyle(
+                  color: context.isDarkTheme
+                      ? c.textPrimary
+                      : AppColors.authBlue,
+                ),
               ),
               TextSpan(
                 text: highlight,
@@ -291,21 +298,22 @@ class AuthDivider extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Row(
       children: [
-        const Expanded(child: Divider(color: AppColors.border)),
+        Expanded(child: Divider(color: c.border)),
         Padding(
           padding: const EdgeInsets.symmetric(horizontal: 12),
           child: Text(
             label,
-            style: const TextStyle(
-              color: AppColors.textSecondary,
+            style: TextStyle(
+              color: c.textSecondary,
               fontSize: 13,
               fontWeight: FontWeight.w600,
             ),
           ),
         ),
-        const Expanded(child: Divider(color: AppColors.border)),
+        Expanded(child: Divider(color: c.border)),
       ],
     );
   }

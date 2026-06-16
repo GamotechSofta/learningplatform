@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/themed_colors.dart';
 
 class AuthTextField extends StatelessWidget {
   const AuthTextField({
@@ -24,32 +25,33 @@ class AuthTextField extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final borderColor = highlightBorder ? AppColors.authBlue : AppColors.border;
+    final c = context.colors;
+    final borderColor = highlightBorder ? AppColors.authBlue : c.border;
 
     return TextFormField(
       controller: controller,
       obscureText: obscureText,
       keyboardType: keyboardType,
       validator: validator,
-      style: const TextStyle(
-        color: AppColors.textPrimary,
+      style: TextStyle(
+        color: c.textPrimary,
         fontSize: 15,
         fontWeight: FontWeight.w500,
       ),
       decoration: InputDecoration(
         labelText: label,
         labelStyle: TextStyle(
-          color: highlightBorder ? AppColors.authBlue : AppColors.textSecondary,
+          color: highlightBorder ? AppColors.authBlue : c.textSecondary,
           fontWeight: FontWeight.w600,
           fontSize: 13,
         ),
-        floatingLabelStyle: const TextStyle(
+        floatingLabelStyle: TextStyle(
           color: AppColors.authBlue,
           fontWeight: FontWeight.w700,
         ),
         suffixIcon: suffixIcon,
         filled: true,
-        fillColor: AppColors.inputFill,
+        fillColor: c.inputFill,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 18),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(8),

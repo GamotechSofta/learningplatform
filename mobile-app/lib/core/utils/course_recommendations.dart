@@ -3,6 +3,7 @@ import '../../models/course.dart';
 import '../constants/learning_tracks.dart';
 import 'category_list_utils.dart';
 import 'course_list_utils.dart';
+import 'course_playability.dart';
 
 class CourseRecommendations {
   CourseRecommendations._();
@@ -93,20 +94,20 @@ class CourseRecommendations {
     required String? learningTrack,
     int limit = 6,
   }) {
-    final playable =
-        courses.where(CourseListUtils.hasPlayableVideos).toList();
+    final published = courses.where(CoursePlayability.isListable).toList();
 
     final track = learningTrack;
     if (track == null ||
         track.isEmpty ||
         track == LearningTracks.exploreAll) {
       return CourseListUtils.filterAndSort(
-        courses: playable.where(CourseListUtils.hasBanner).toList(),
+        courses: published,
         sort: CourseSortOption.featured,
+        prioritizeThumbnails: false,
       ).take(limit).toList();
     }
 
-    final ranked = playable
+    final ranked = published
         .map((course) => MapEntry(course, scoreCourse(course, track)))
         .where((entry) => entry.value > 0)
         .toList()
@@ -124,8 +125,9 @@ class CourseRecommendations {
     if (picked.length < limit) {
       final pickedIds = picked.map((c) => c.id).toSet();
       final filler = CourseListUtils.filterAndSort(
-        courses: playable.where((c) => !pickedIds.contains(c.id)).toList(),
+        courses: published.where((c) => !pickedIds.contains(c.id)).toList(),
         sort: CourseSortOption.featured,
+        prioritizeThumbnails: false,
       );
       picked.addAll(filler.take(limit - picked.length));
     }

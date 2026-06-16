@@ -1,14 +1,19 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'config/app_config.dart';
 import 'core/api/api_client.dart';
 import 'core/theme/app_theme.dart';
+import 'providers/theme_provider.dart';
+import 'providers/catalog_provider.dart';
 import 'providers/auth_provider.dart';
 import 'providers/learning_progress_provider.dart';
 import 'providers/notification_provider.dart';
 import 'providers/saved_courses_provider.dart';
 import 'providers/subscription_provider.dart';
+import 'providers/network_provider.dart';
+import 'providers/video_engagement_provider.dart';
 import 'routing/app_router.dart';
 import 'services/auth_service.dart';
 import 'services/session_storage.dart';
@@ -19,7 +24,10 @@ import 'services/notification_service.dart';
 import 'services/saved_courses_service.dart';
 import 'services/payment_service.dart';
 import 'services/subscription_service.dart';
+import 'services/video_download_service.dart';
+import 'services/video_engagement_service.dart';
 import 'core/utils/notification_sync.dart';
+import 'widgets/offline_listener.dart';
 
 class VidyankApp extends StatefulWidget {
   const VidyankApp({super.key});
@@ -36,6 +44,7 @@ class _VidyankAppState extends State<VidyankApp> {
   late final CourseService _courseService;
   late final SubscriptionService _subscriptionService;
   late final PaymentService _paymentService;
+  CatalogProvider? _catalogProvider;
   late final LearningProgressService _learningProgressService;
   NotificationService? _notificationService;
   late final AuthProvider _authProvider;
@@ -43,7 +52,10 @@ class _VidyankAppState extends State<VidyankApp> {
   late final LearningProgressProvider _learningProgressProvider;
   SavedCoursesProvider? _savedCoursesProvider;
   NotificationProvider? _notificationProvider;
-  late final AppRouter _appRouter;
+  VideoEngagementProvider? _videoEngagementProvider;
+  NetworkProvider? _networkProvider;
+  ThemeProvider? _themeProvider;
+  AppRouter? _appRouter;
 
   SavedCoursesProvider get _savedCourses {
     _savedCoursesProvider ??= SavedCoursesProvider(SavedCoursesService());
@@ -54,6 +66,29 @@ class _VidyankAppState extends State<VidyankApp> {
     _notificationService ??= NotificationService();
     _notificationProvider ??= NotificationProvider(_notificationService!);
     return _notificationProvider!;
+  }
+
+  CatalogProvider get _catalog {
+    _catalogProvider ??= CatalogProvider(_categoryService, _courseService);
+    return _catalogProvider!;
+  }
+
+  ThemeProvider get _theme {
+    _themeProvider ??= ThemeProvider();
+    return _themeProvider!;
+  }
+
+  NetworkProvider get _network {
+    _networkProvider ??= NetworkProvider();
+    return _networkProvider!;
+  }
+
+  VideoEngagementProvider get _videoEngagement {
+    _videoEngagementProvider ??= VideoEngagementProvider(
+      VideoEngagementService(),
+      VideoDownloadService(),
+    );
+    return _videoEngagementProvider!;
   }
 
   @override
@@ -71,8 +106,13 @@ class _VidyankAppState extends State<VidyankApp> {
     _subscriptionProvider = SubscriptionProvider(_subscriptionService);
     _learningProgressProvider = LearningProgressProvider(_learningProgressService);
     _bootstrap();
-    _appRouter = AppRouter(
+    _ensureRouter();
+  }
+
+  void _ensureRouter() {
+    _appRouter ??= AppRouter(
       authProvider: _authProvider,
+      networkProvider: _network,
       categoryService: _categoryService,
       courseService: _courseService,
       subscriptionService: _subscriptionService,
@@ -80,8 +120,33 @@ class _VidyankAppState extends State<VidyankApp> {
     );
   }
 
+  @override
+  void reassemble() {
+    super.reassemble();
+    if (kDebugMode) {
+      // Drop stale router after hot reload (old instances may lack new fields).
+      _appRouter = null;
+      _ensureRouter();
+    }
+  }
+
+  @override
+  void dispose() {
+    final router = _appRouter;
+    if (router != null) {
+      try {
+        router.router.dispose();
+      } catch (_) {}
+    }
+    super.dispose();
+  }
+
   Future<void> _bootstrap() async {
-    await _authProvider.bootstrap();
+    await _catalog.warmFromDisk();
+    await Future.wait([
+      _authProvider.bootstrap(),
+      _catalog.load(),
+    ]);
     final user = _authProvider.user;
     if (user != null) {
       await Future.wait([
@@ -89,6 +154,7 @@ class _VidyankAppState extends State<VidyankApp> {
         _learningProgressProvider.loadForUser(user.id),
         _savedCourses.loadForUser(user.id),
         _notifications.loadForUser(user.id),
+        _videoEngagement.refreshDownloads(user.id),
       ]);
       await syncNotifications(
         userId: user.id,
@@ -101,28 +167,43 @@ class _VidyankAppState extends State<VidyankApp> {
 
   @override
   Widget build(BuildContext context) {
+    _ensureRouter();
+    final router = _appRouter!.router;
+
     return MultiProvider(
       providers: [
+        ChangeNotifierProvider.value(value: _theme),
         ChangeNotifierProvider.value(value: _authProvider),
+        ChangeNotifierProvider.value(value: _catalog),
         ChangeNotifierProvider.value(value: _subscriptionProvider),
         ChangeNotifierProvider.value(value: _learningProgressProvider),
         ChangeNotifierProvider.value(value: _savedCourses),
         ChangeNotifierProvider.value(value: _notifications),
+        ChangeNotifierProvider.value(value: _network),
+        ChangeNotifierProvider.value(value: _videoEngagement),
       ],
-      child: MaterialApp.router(
-        title: AppConfig.appName,
-        theme: AppTheme.light,
-        routerConfig: _appRouter.router,
-        debugShowCheckedModeBanner: false,
-        builder: (context, child) {
-          final loading = context.watch<AuthProvider>().loading;
-          if (loading) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
+      child: Consumer<ThemeProvider>(
+        builder: (context, theme, _) => MaterialApp.router(
+          title: AppConfig.appName,
+          theme: AppTheme.light,
+          darkTheme: AppTheme.dark,
+          themeMode: theme.mode,
+          routerConfig: router,
+          debugShowCheckedModeBanner: false,
+          builder: (context, child) {
+            final loading = context.watch<AuthProvider>().loading;
+
+            if (loading) {
+              return const Scaffold(
+                body: Center(child: CircularProgressIndicator()),
+              );
+            }
+
+            return OfflineListener(
+              child: child ?? const SizedBox.shrink(),
             );
-          }
-          return child ?? const SizedBox.shrink();
-        },
+          },
+        ),
       ),
     );
   }

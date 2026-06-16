@@ -70,6 +70,12 @@ class AppColors {
 
   static const placeholder = Color(0xFFE2E8F0);
 
+  /// Dark theme palette
+  static const darkBackground = Color(0xFF0F172A);
+  static const darkSurface = Color(0xFF1E293B);
+  static const darkBorder = Color(0xFF334155);
+  static const darkTextPrimary = Color(0xFFF8FAFC);
+  static const darkTextSecondary = Color(0xFF94A3B8);
 }
 
 

@@ -3,13 +3,23 @@ import Video from "../models/video.js";
 import { readObjectRange } from "./s3.js";
 import { looksLikeValidVideo } from "./videoIntegrity.js";
 
+/** Mongo filter: video has some playable source (incl. legacy stored videoUrl). */
+export const PLAYABLE_MEDIA_OR = [
+  { videoKey: { $exists: true, $nin: [null, ""] } },
+  { externalUrl: { $exists: true, $nin: [null, ""] } },
+  { hlsKey: { $exists: true, $nin: [null, ""] } },
+  { videoUrl: { $exists: true, $nin: [null, ""] } },
+];
+
 const integrityCache = new Map();
 const CACHE_TTL_MS = 60 * 60 * 1000;
 
 export const isPlayableVideoDoc = (video) => {
   if (!video) return false;
   if (video.mediaValid === false) return false;
-  return Boolean(video.videoKey || video.externalUrl || video.videoUrl);
+  return Boolean(
+    video.videoKey || video.externalUrl || video.hlsKey || video.videoUrl
+  );
 };
 
 const cacheIntegrity = (key, valid) => {
@@ -69,6 +79,14 @@ export const courseDataHasPlayableVideos = (courseData) => {
   return false;
 };
 
+/** Fast filter using DB flags only — no per-request S3 integrity checks. */
+export const filterUnplayableVideosFromCourseData = (courseData) => {
+  for (const lesson of courseData?.lessons || []) {
+    lesson.videos = (lesson.videos || []).filter(isPlayableVideoDoc);
+  }
+  return courseData;
+};
+
 export const courseDataHasVerifiedPlayableVideos = async (courseData) => {
   for (const lesson of courseData?.lessons || []) {
     for (const video of lesson.videos || []) {
@@ -92,7 +110,8 @@ export const pruneUnverifiedVideosFromCourseData = async (courseData) => {
 };
 
 /**
- * Course IDs with at least one published video that passes S3 integrity checks.
+ * Course IDs with at least one published video that has usable media metadata.
+ * Uses DB flags only so catalog matches admin-published content without slow S3 checks.
  */
 export const getPlayableCourseIdSet = async (courseIds) => {
   if (!courseIds?.length) return new Set();
@@ -110,35 +129,17 @@ export const getPlayableCourseIdSet = async (courseIds) => {
   const videos = await Video.find({
     lesson: { $in: lessons.map((lesson) => lesson._id) },
     isPublished: true,
-    $or: [
-      { videoKey: { $exists: true, $nin: [null, ""] } },
-      { externalUrl: { $exists: true, $nin: [null, ""] } },
-    ],
+    mediaValid: { $ne: false },
+    $or: PLAYABLE_MEDIA_OR,
   })
-    .select("_id lesson videoKey externalUrl mediaValid")
-    .sort({ order: 1 })
+    .select("_id lesson")
     .lean();
 
-  const videosByCourse = new Map();
+  const playable = new Set();
   for (const video of videos) {
     const courseId = lessonToCourse[video.lesson.toString()];
-    if (!courseId) continue;
-    if (!videosByCourse.has(courseId)) videosByCourse.set(courseId, []);
-    videosByCourse.get(courseId).push(video);
+    if (courseId) playable.add(courseId);
   }
-
-  const playable = new Set();
-
-  await Promise.all(
-    [...videosByCourse.entries()].map(async ([courseId, courseVideos]) => {
-      for (const video of courseVideos) {
-        if (await verifyVideoFileIntegrity(video)) {
-          playable.add(courseId);
-          return;
-        }
-      }
-    })
-  );
 
   return playable;
 };
@@ -154,4 +155,19 @@ export const filterCoursesWithPlayableMedia = async (courses) => {
   return list
     .filter((course) => playableIds.has(course._id.toString()))
     .map((course) => ({ ...course, hasPlayableVideos: true }));
+};
+
+/** Tag each course with hasPlayableVideos but keep all published entries in the list. */
+export const annotateCoursesWithPlayableMedia = async (courses) => {
+  const list = courses.map((course) =>
+    course?.toObject ? course.toObject() : { ...course }
+  );
+  if (!list.length) return [];
+
+  const playableIds = await getPlayableCourseIdSet(list.map((course) => course._id));
+
+  return list.map((course) => ({
+    ...course,
+    hasPlayableVideos: playableIds.has(course._id.toString()),
+  }));
 };

@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/theme/themed_colors.dart';
 import '../models/certificate.dart';
 import '../providers/auth_provider.dart';
 import '../providers/learning_progress_provider.dart';
@@ -14,12 +15,13 @@ class CertificatesScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final auth = context.watch<AuthProvider>();
     final progress = context.watch<LearningProgressProvider>();
 
     if (!auth.isAuthenticated) {
-      return const Scaffold(
-        backgroundColor: AppColors.background,
+      return Scaffold(
+        backgroundColor: c.background,
         body: SafeArea(
           child: EmptyState(
             title: 'Sign in to view certificates',
@@ -33,7 +35,7 @@ class CertificatesScreen extends StatelessWidget {
     final certificates = progress.certificates;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       body: SafeArea(
         child: certificates.isEmpty
             ? const EmptyState(
@@ -44,18 +46,18 @@ class CertificatesScreen extends StatelessWidget {
             : ListView(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
                 children: [
-                  const Text(
+                  Text(
                     'My Certificates',
                     style: TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.w800,
-                      color: AppColors.textPrimary,
+                      color: c.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  SizedBox(height: 6),
                   Text(
                     '${certificates.length} earned',
-                    style: const TextStyle(color: AppColors.textSecondary),
+                    style: TextStyle(color: c.textSecondary),
                   ),
                   const SizedBox(height: 20),
                   ...certificates.map(
@@ -75,6 +77,7 @@ class _CertificateListItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final dateText = DateFormat('MMM d, yyyy').format(certificate.issuedAt);
 
     return Material(
@@ -86,9 +89,9 @@ class _CertificateListItem extends StatelessWidget {
           margin: const EdgeInsets.only(bottom: 12),
           padding: const EdgeInsets.all(14),
           decoration: BoxDecoration(
-            color: AppColors.surface,
+            color: c.surface,
             borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.border),
+            border: Border.all(color: c.border),
           ),
           child: Row(
             children: [
@@ -99,13 +102,13 @@ class _CertificateListItem extends StatelessWidget {
                   color: AppColors.accentGold.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(12),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.emoji_events_rounded,
                   color: AppColors.accentGold,
                   size: 28,
                 ),
               ),
-              const SizedBox(width: 14),
+              SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -114,16 +117,16 @@ class _CertificateListItem extends StatelessWidget {
                       certificate.courseTitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.w700,
                         fontSize: 15,
-                        color: AppColors.textPrimary,
+                        color: c.textPrimary,
                       ),
                     ),
-                    const SizedBox(height: 4),
-                    const Text(
+                    SizedBox(height: 4),
+                    Text(
                       'Certificate of Completion',
-                      style: TextStyle(fontSize: 12, color: AppColors.textSecondary),
+                      style: TextStyle(fontSize: 12, color: c.textSecondary),
                     ),
                     const SizedBox(height: 2),
                     Text(

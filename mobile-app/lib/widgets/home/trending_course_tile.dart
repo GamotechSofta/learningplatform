@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../core/theme/app_colors.dart';
+import '../../core/theme/themed_colors.dart';
 import '../../models/course.dart';
 import '../save_course_button.dart';
 import '../thumbnail_image.dart';
+import '../course_rating_stars.dart';
 
 class TrendingCourseTile extends StatelessWidget {
   const TrendingCourseTile({
@@ -17,6 +19,7 @@ class TrendingCourseTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final price = _formatPrice(course);
 
     return GestureDetector(
@@ -25,12 +28,11 @@ class TrendingCourseTile extends StatelessWidget {
         width: 220,
         margin: const EdgeInsets.only(right: 14),
         decoration: BoxDecoration(
-          color: AppColors.surface,
+          color: c.surface,
           borderRadius: BorderRadius.circular(18),
-          border: Border.all(color: AppColors.border),
+          border: Border.all(color: c.border),
           boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
+            BoxShadow(color: c.cardShadow,
               blurRadius: 10,
               offset: const Offset(0, 4),
             ),
@@ -69,29 +71,31 @@ class TrendingCourseTile extends StatelessWidget {
                     course.title,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 14,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.textPrimary,
+                      color: c.textPrimary,
                       height: 1.3,
                     ),
                   ),
+                  const SizedBox(height: 6),
+                  CourseRatingStars(course: course),
                   const SizedBox(height: 8),
                   Row(
                     children: [
                       if (course.videoCount > 0) ...[
-                        const Icon(
+                        Icon(
                           Icons.play_circle_outline,
                           size: 15,
-                          color: AppColors.textSecondary,
+                          color: c.textSecondary,
                         ),
-                        const SizedBox(width: 4),
+                        SizedBox(width: 4),
                         Text(
                           '${course.videoCount} lessons',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
                             fontWeight: FontWeight.w600,
-                            color: AppColors.textSecondary,
+                            color: c.textSecondary,
                           ),
                         ),
                       ],

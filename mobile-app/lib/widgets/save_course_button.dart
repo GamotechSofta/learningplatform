@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/theme/themed_colors.dart';
 import '../models/course.dart';
 import '../providers/auth_provider.dart';
 import '../providers/saved_courses_provider.dart';
@@ -22,6 +23,7 @@ class SaveCourseButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final auth = context.watch<AuthProvider>();
     final saved = context.watch<SavedCoursesProvider>();
     final isSaved = saved.isSaved(course.id);
@@ -43,13 +45,13 @@ class SaveCourseButton extends StatelessWidget {
             ? Container(
                 padding: padding,
                 decoration: BoxDecoration(
-                  color: AppColors.surface.withValues(alpha: 0.95),
+                  color: c.surface.withValues(alpha: 0.95),
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
                   isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
                   size: iconSize,
-                  color: isSaved ? AppColors.primary : AppColors.textSecondary,
+                  color: isSaved ? AppColors.primary : c.textSecondary,
                 ),
               )
             : Padding(
@@ -57,7 +59,7 @@ class SaveCourseButton extends StatelessWidget {
                 child: Icon(
                   isSaved ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
                   size: iconSize,
-                  color: isSaved ? AppColors.primary : AppColors.textSecondary,
+                  color: isSaved ? AppColors.primary : c.textSecondary,
                 ),
               ),
       ),

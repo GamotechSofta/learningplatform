@@ -2,7 +2,7 @@ import crypto from "crypto";
 import axios from "axios";
 
 const sha512 = (value) =>
-  crypto.createHash("sha512").update(String(value)).digest("hex");
+  crypto.createHash("sha512").update(String(value)).digest("hex").toLowerCase();
 
 export const getPayUConfig = () => {
   const key = process.env.PAYU_KEY;
@@ -109,6 +109,12 @@ export const validateResponseHash = ({
 export const generateVerifyHash = ({ key, salt, txnid }) =>
   sha512([key, "verify_payment", txnid, salt].join("|"));
 
+export const normalizePayUPhone = (phone) => {
+  const digits = String(phone || "").replace(/\D/g, "");
+  if (digits.length >= 10) return digits.slice(-10);
+  return "9999999999";
+};
+
 export const verifyPaymentWithPayU = async (txnid) => {
   const { key, salt, verifyUrl } = getPayUConfig();
   const hash = generateVerifyHash({ key, salt, txnid });
@@ -125,7 +131,15 @@ export const verifyPaymentWithPayU = async (txnid) => {
     timeout: 20000,
   });
 
-  const payload = response.data;
+  let payload = response.data;
+  if (typeof payload === "string") {
+    try {
+      payload = JSON.parse(payload);
+    } catch {
+      return { verified: false, details: payload };
+    }
+  }
+
   if (!payload || payload.status !== 1) {
     return { verified: false, details: payload };
   }

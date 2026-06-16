@@ -1,4 +1,5 @@
 import '../core/utils/media_url.dart';
+import '../core/utils/course_rating.dart';
 import 'lesson.dart';
 
 class CoursePricing {
@@ -80,6 +81,12 @@ class Course {
   /// `true`/`false` from API; `null` when the server did not send the flag.
   final bool? hasPlayableVideos;
 
+  /// Fixed display rating (4.0 – 5.0) derived from course id.
+  double get rating => CourseRating.forCourse(id);
+
+  /// Fixed review count for display, derived from course id.
+  int get reviewCount => CourseRating.reviewCountFor(id);
+
   factory Course.fromJson(
     Map<String, dynamic> json, {
     bool includeAllPlayable = false,
@@ -103,7 +110,11 @@ class Course {
       lessons.sort((a, b) => a.order.compareTo(b.order));
     }
 
-    final videoCount = lessons.fold<int>(0, (sum, l) => sum + l.videoCount);
+    final videoCountFromLessons =
+        lessons.fold<int>(0, (sum, l) => sum + l.videoCount);
+    final videoCount = videoCountFromLessons > 0
+        ? videoCountFromLessons
+        : (json['videoCount'] as num?)?.toInt() ?? 0;
     final pricing = CoursePricing.fromJson(
       json['pricing'] is Map ? Map<String, dynamic>.from(json['pricing']) : null,
     );
@@ -203,6 +214,7 @@ class Course {
       'description': description,
       'thumbnail': thumbnail,
       'previewVideoUrl': previewVideoUrl,
+      'hasPlayableVideos': hasPlayableVideos,
       'category': categoryId != null
           ? {'_id': categoryId, 'name': categoryName}
           : null,

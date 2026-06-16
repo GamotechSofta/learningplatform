@@ -1,4 +1,5 @@
 import '../core/api/api_client.dart';
+import '../core/api/api_exception.dart';
 import '../config/app_config.dart';
 
 class PayUPaymentInit {
@@ -64,8 +65,14 @@ class PaymentService {
         'plan': plan,
         'returnBaseUrl': AppConfig.apiBaseUrl,
       },
-      parser: (data) =>
-          PayUPaymentInit.fromJson(Map<String, dynamic>.from(data as Map)),
+      parser: (data) {
+        final map = Map<String, dynamic>.from(data as Map);
+        final init = PayUPaymentInit.fromJson(map);
+        if (init.paymentUrl.isEmpty || init.params.isEmpty) {
+          throw ApiException('Payment server returned an incomplete PayU session.');
+        }
+        return init;
+      },
     );
   }
 

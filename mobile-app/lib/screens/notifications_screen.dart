@@ -3,6 +3,7 @@ import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme/app_colors.dart';
+import '../core/theme/themed_colors.dart';
 import '../core/utils/notification_builder.dart';
 import '../models/app_notification.dart';
 import '../providers/notification_provider.dart';
@@ -26,13 +27,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     final provider = context.watch<NotificationProvider>();
     final items = provider.notifications;
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: c.background,
       appBar: AppBar(
-        backgroundColor: AppColors.background,
+        backgroundColor: c.background,
         title: const Text('Notifications'),
         actions: [
           if (provider.unreadCount > 0)
@@ -45,12 +47,12 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   );
                 }
               },
-              child: const Text('Mark all read'),
+              child: Text('Mark all read'),
             ),
         ],
       ),
       body: items.isEmpty
-          ? const Center(
+          ? Center(
               child: Padding(
                 padding: EdgeInsets.symmetric(horizontal: 32),
                 child: Column(
@@ -59,7 +61,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     Icon(
                       Icons.notifications_none_rounded,
                       size: 48,
-                      color: AppColors.textSecondary,
+                      color: c.textSecondary,
                     ),
                     SizedBox(height: 12),
                     Text(
@@ -67,14 +69,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.w700,
-                        color: AppColors.textPrimary,
+                        color: c.textPrimary,
                       ),
                     ),
                     SizedBox(height: 6),
                     Text(
                       'Updates about your courses, progress, and certificates will appear here.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(color: AppColors.textSecondary),
+                      style: TextStyle(color: c.textSecondary),
                     ),
                   ],
                 ),
@@ -116,8 +118,9 @@ class _NotificationCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final c = context.colors;
     return Material(
-      color: AppColors.surface,
+      color: c.surface,
       borderRadius: BorderRadius.circular(16),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
@@ -127,7 +130,7 @@ class _NotificationCard extends StatelessWidget {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: item.isRead ? AppColors.border : AppColors.primary.withValues(alpha: 0.45),
+              color: item.isRead ? c.border : AppColors.primary.withValues(alpha: 0.45),
             ),
           ),
           child: Row(
@@ -141,7 +144,7 @@ class _NotificationCard extends StatelessWidget {
                 ),
                 child: Icon(item.icon, color: item.color, size: 22),
               ),
-              const SizedBox(width: 12),
+              SizedBox(width: 12),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -154,7 +157,7 @@ class _NotificationCard extends StatelessWidget {
                             style: TextStyle(
                               fontWeight: item.isRead ? FontWeight.w600 : FontWeight.w800,
                               fontSize: 15,
-                              color: AppColors.textPrimary,
+                              color: c.textPrimary,
                             ),
                           ),
                         ),
@@ -169,19 +172,19 @@ class _NotificationCard extends StatelessWidget {
                           ),
                       ],
                     ),
-                    const SizedBox(height: 4),
+                    SizedBox(height: 4),
                     Text(
                       item.body,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: AppColors.textSecondary,
+                        color: c.textSecondary,
                         height: 1.4,
                       ),
                     ),
-                    const SizedBox(height: 6),
+                    SizedBox(height: 6),
                     Text(
                       _timeLabel(item),
-                      style: const TextStyle(fontSize: 11, color: AppColors.textSecondary),
+                      style: TextStyle(fontSize: 11, color: c.textSecondary),
                     ),
                   ],
                 ),

@@ -7,11 +7,13 @@ import {
   completeMultipartUpload,
   abortMultipartUpload,
   deleteFromS3,
+  deleteObjectsByPrefix,
   readObjectRange,
   UPLOAD_FOLDERS,
   MAX_VIDEO_BYTES,
 } from "../utils/s3.js";
 import { looksLikeValidVideo } from "../utils/videoIntegrity.js";
+import { queueVideoStreamingJob } from "../utils/videoStreaming.js";
 
 // Only allow presigning/completing keys inside the videos/ prefix so a caller
 // cannot get a signed URL for an arbitrary object in the bucket.
@@ -180,7 +182,12 @@ export const createVideo = asyncHandler(async (req, res) => {
     size: Number(size) || 0,
     order: order ?? existingCount,
     isPublished: isPublished === true || isPublished === "true",
+    streamingStatus: videoKey ? "pending" : "skipped",
   });
+
+  if (videoKey) {
+    queueVideoStreamingJob(video._id.toString());
+  }
 
   res.status(201).json({ success: true, data: video });
 });
@@ -235,6 +242,7 @@ export const updateVideo = asyncHandler(async (req, res) => {
     }
   }
 
+  const previousVideoKey = video.videoKey;
   const updatable = [
     "lesson",
     "title",
@@ -253,6 +261,17 @@ export const updateVideo = asyncHandler(async (req, res) => {
 
   const updatedVideo = await video.save();
 
+  if (
+    req.body.videoKey &&
+    req.body.videoKey !== previousVideoKey &&
+    updatedVideo.videoKey
+  ) {
+    updatedVideo.streamingStatus = "pending";
+    updatedVideo.hlsKey = undefined;
+    await updatedVideo.save();
+    queueVideoStreamingJob(updatedVideo._id.toString());
+  }
+
   res.json({ success: true, data: updatedVideo });
 });
 
@@ -265,9 +284,14 @@ export const deleteVideo = asyncHandler(async (req, res) => {
   }
 
   // Best-effort cleanup of S3 objects; never block the DB delete on this.
+  const hlsPrefix = video.hlsKey
+    ? video.hlsKey.replace(/\/master\.m3u8$/i, "")
+    : null;
+
   await Promise.allSettled([
     video.videoKey ? deleteFromS3(video.videoKey) : Promise.resolve(),
     video.thumbnailKey ? deleteFromS3(video.thumbnailKey) : Promise.resolve(),
+    hlsPrefix ? deleteObjectsByPrefix(hlsPrefix) : Promise.resolve(),
   ]);
 
   await video.deleteOne();

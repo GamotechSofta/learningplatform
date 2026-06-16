@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/theme/app_colors.dart';
 import '../core/utils/notification_builder.dart';
 import '../models/app_notification.dart';
 import '../services/notification_service.dart';
@@ -10,6 +11,7 @@ class NotificationProvider extends ChangeNotifier {
   final NotificationService _service;
 
   String? _userId;
+  DateTime? _installedAt;
   final Set<String> _readIds = {};
   List<AppNotification> _notifications = [];
 
@@ -20,8 +22,9 @@ class NotificationProvider extends ChangeNotifier {
 
   Future<void> loadForUser(String userId) async {
     _userId = userId;
+    _installedAt = await _service.ensureInstallAt(userId);
     await _reloadReadIds(userId);
-    _notifications = [];
+    _notifications = _withInstallNotification(const []);
     notifyListeners();
   }
 
@@ -31,11 +34,38 @@ class NotificationProvider extends ChangeNotifier {
   }) async {
     if (_userId != userId) {
       _userId = userId;
+      _installedAt = await _service.ensureInstallAt(userId);
       await _reloadReadIds(userId);
     }
 
-    _notifications = NotificationBuilder.build(input, readIds: _readIds);
+    final built = NotificationBuilder.build(input, readIds: _readIds);
+    _notifications = _withInstallNotification(built);
     notifyListeners();
+  }
+
+  List<AppNotification> _withInstallNotification(List<AppNotification> base) {
+    final installAt = _installedAt;
+    if (installAt == null) return base;
+
+    const id = 'welcome:install';
+    final welcome = AppNotification(
+      id: id,
+      icon: Icons.notifications_active_outlined,
+      color: AppColors.primary,
+      title: 'Welcome to Vidyank',
+      body:
+          'Thanks for installing the app. Start your first lesson and keep learning every day.',
+      occurredAt: installAt,
+      route: '/',
+      isRead: _readIds.contains(id),
+    );
+
+    final items = <AppNotification>[
+      welcome,
+      ...base.where((notification) => notification.id != id),
+    ];
+    items.sort((a, b) => b.occurredAt.compareTo(a.occurredAt));
+    return items;
   }
 
   Future<void> _reloadReadIds(String userId) async {
@@ -46,6 +76,7 @@ class NotificationProvider extends ChangeNotifier {
 
   void clear() {
     _userId = null;
+    _installedAt = null;
     _readIds.clear();
     _notifications = [];
     notifyListeners();

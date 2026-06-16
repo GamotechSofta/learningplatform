@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
-import '../core/utils/course_list_utils.dart';
+import '../core/utils/course_playability.dart';
 import '../models/category.dart';
 import '../services/category_service.dart';
 import '../widgets/course_card.dart';
@@ -68,7 +68,7 @@ class _SearchScreenState extends State<SearchScreen> {
                   future: _future,
                   builder: (context, snapshot) {
                     if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
+                      return Center(child: CircularProgressIndicator());
                     }
 
                     if (snapshot.hasError) {
@@ -81,8 +81,7 @@ class _SearchScreenState extends State<SearchScreen> {
                     final categories = snapshot.data ?? [];
                     final courses = categories
                         .expand((c) => c.courses)
-                        .where((c) => c.isPublished)
-                        .where(CourseListUtils.hasPlayableVideos)
+                        .where(CoursePlayability.isListable)
                         .toList();
 
                     if (courses.isEmpty) {

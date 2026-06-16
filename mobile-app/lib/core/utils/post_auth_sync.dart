@@ -3,6 +3,7 @@ import '../../providers/learning_progress_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../providers/saved_courses_provider.dart';
 import '../../providers/subscription_provider.dart';
+import '../../providers/video_engagement_provider.dart';
 import 'notification_sync.dart';
 
 /// Loads user-specific data after sign-in without failing auth if one call errors.
@@ -12,6 +13,7 @@ Future<void> syncUserDataAfterAuth({
   required LearningProgressProvider progress,
   required NotificationProvider notifications,
   required SavedCoursesProvider saved,
+  required VideoEngagementProvider engagement,
 }) async {
   final user = auth.user;
   if (user == null || user.id.isEmpty) return;
@@ -21,6 +23,7 @@ Future<void> syncUserDataAfterAuth({
     progress.loadForUser(user.id).catchError((_) {}),
     saved.loadForUser(user.id).catchError((_) {}),
     notifications.loadForUser(user.id).catchError((_) {}),
+    engagement.refreshDownloads(user.id).catchError((_) {}),
   ]);
 
   try {

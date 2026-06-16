@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../core/utils/course_list_utils.dart';
 import '../models/course.dart';
+import 'course_placeholder_thumbnail.dart';
 import 'thumbnail_image.dart';
 
 /// Left-side course preview used on course lists (Courses tab, My Learning).
@@ -18,6 +20,14 @@ class CourseSideThumbnail extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (!CourseListUtils.hasPreviewMedia(course)) {
+      return CoursePlaceholderThumbnail(
+        course: course,
+        width: width,
+        height: height,
+      );
+    }
+
     return SizedBox(
       width: width,
       height: height,
@@ -28,7 +38,7 @@ class CourseSideThumbnail extends StatelessWidget {
         height: height,
         borderRadius: 0,
         fit: BoxFit.cover,
-        showMediaOverlay: true,
+        showMediaOverlay: CourseListUtils.hasPreviewMedia(course),
         icon: Icons.play_circle_outline,
       ),
     );

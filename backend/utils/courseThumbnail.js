@@ -13,6 +13,12 @@ export const pickVideoUrl = (video) => {
   return resolveMediaUrl(video.videoKey);
 };
 
+export const pickHlsUrl = (video) => {
+  if (!video) return "";
+  if (video.hlsUrl) return resolveMediaUrl(video.hlsUrl);
+  return resolveMediaUrl(video.hlsKey);
+};
+
 export const firstThumbnailFromLessons = (lessons = []) => {
   for (const lesson of lessons) {
     for (const video of lesson.videos || []) {

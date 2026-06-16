@@ -10,6 +10,27 @@ class VideoPlayback {
     return url;
   }
 
+  static bool isHlsManifest(String url) {
+    final lower = url.toLowerCase();
+    return lower.contains('.m3u8');
+  }
+
+  /// Progressive MP4 from CloudFront (HTTP range requests). HLS only when explicitly ready.
+  static String resolvePlaybackSource({
+    String? hlsUrl,
+    String? mp4Url,
+    String? streamingStatus,
+  }) {
+    final mp4 = resolveUrl(mp4Url);
+    final hls = resolveUrl(hlsUrl);
+    final hlsReady = streamingStatus == 'ready';
+
+    if (hlsReady && hls.isNotEmpty && isHlsManifest(hls)) {
+      return hls;
+    }
+    return mp4;
+  }
+
   static bool isEmbeddableStream(String url) {
     final lower = url.toLowerCase();
     if (lower.isEmpty) return false;
@@ -19,7 +40,11 @@ class VideoPlayback {
     return lower.startsWith('http://') || lower.startsWith('https://');
   }
 
-  /// Maps native player errors (ExoPlayer / AVPlayer) to a user-facing message.
+  static String? streamQualityLabel(String url) {
+    if (isHlsManifest(url)) return 'Auto quality';
+    return null;
+  }
+
   static String friendlyError(Object error) {
     final text = error.toString().toLowerCase();
     if (text.contains('unrecognizedinputformat') ||
