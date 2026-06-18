@@ -67,6 +67,9 @@ export default function Footer() {
           <p className="text-sm text-text-secondary">
             &copy; {new Date().getFullYear()} Vidyank. All rights reserved.
           </p>
+          <Link to="/privacy" className="text-sm text-text-secondary hover:text-primary">
+            Privacy Policy
+          </Link>
         </div>
       </div>
     </footer>
