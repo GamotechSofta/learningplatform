@@ -36,7 +36,7 @@ export default function Hero() {
 
           <div className="mt-10 flex flex-wrap gap-8">
             {[
-              { value: '100+', label: 'Active learners' },
+              { value: '20k+', label: 'Active learners' },
               { value: '100+', label: 'Courses' },
               { value: '4.8★', label: 'Average rating' },
             ].map((stat) => (

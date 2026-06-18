@@ -152,6 +152,10 @@ class _HomeScreenState extends State<HomeScreen> {
         .take(3)
         .toList();
 
+    final coursesCompleted = purchasedCourses
+        .where((course) => progress.progressForCourse(course.id, course.videoCount) >= 1.0)
+        .length;
+
     return Scaffold(
       backgroundColor: c.background,
       body: SafeArea(
@@ -214,7 +218,7 @@ class _HomeScreenState extends State<HomeScreen> {
                 HomeLearningSnapshot(
                   videosWatched: videosWatched,
                   coursesInProgress: coursesInProgress,
-                  certificatesEarned: progress.certificates.length,
+                  coursesCompleted: coursesCompleted,
                   learningTrack: auth.user?.learningTrack,
                   onOpenLearning: () => MainShellScope.of(context).selectTab(2),
                 ),

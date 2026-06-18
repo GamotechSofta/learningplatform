@@ -3,13 +3,11 @@ import 'package:intl/intl.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../models/app_notification.dart';
-import '../../models/certificate.dart';
 import '../../models/course.dart';
 
 class NotificationBuildInput {
   const NotificationBuildInput({
     required this.enrolledCourses,
-    required this.certificates,
     this.continueCourse,
     this.continueWatchedCount = 0,
     this.continueTotalCount = 0,
@@ -20,7 +18,6 @@ class NotificationBuildInput {
   });
 
   final List<Course> enrolledCourses;
-  final List<CourseCertificate> certificates;
   final Course? continueCourse;
   final int continueWatchedCount;
   final int continueTotalCount;
@@ -64,32 +61,11 @@ class NotificationBuilder {
       );
     }
 
-    final sortedCerts = [...input.certificates]
-      ..sort((a, b) => b.issuedAt.compareTo(a.issuedAt));
-    for (final certificate in sortedCerts) {
-      notifications.add(
-        AppNotification(
-          id: 'certificate:${certificate.courseId}',
-          icon: Icons.workspace_premium_outlined,
-          color: const Color(0xFF7C3AED),
-          title: 'Certificate earned',
-          body:
-              'You completed "${certificate.courseTitle}". Your certificate is ready to view.',
-          occurredAt: certificate.issuedAt,
-          route: '/certificates/${certificate.id}',
-          isRead: readIds.contains('certificate:${certificate.courseId}'),
-        ),
-      );
-    }
-
     final watchedCountFor = input.watchedCountFor ?? (_) => 0;
     final progressFor = input.progressForCourse ?? (_, __) => 0.0;
 
     final notStarted = input.enrolledCourses.where((course) {
       if (continueCourse?.id == course.id) return false;
-      if (input.certificates.any((cert) => cert.courseId == course.id)) {
-        return false;
-      }
       final watched = watchedCountFor(course.id);
       if (watched > 0) return false;
       return progressFor(course.id, course.videoCount) < 1.0;
@@ -137,6 +113,25 @@ class NotificationBuilder {
           occurredAt: lastWatchedAtFor?.call(course.id) ?? DateTime.now(),
           route: '/courses/${course.id}',
           isRead: readIds.contains('progress:${course.id}'),
+        ),
+      );
+    }
+
+    final completed = input.enrolledCourses.where((course) {
+      return progressFor(course.id, course.videoCount) >= 1.0;
+    }).toList();
+
+    for (final course in completed.take(2)) {
+      notifications.add(
+        AppNotification(
+          id: 'completed:${course.id}',
+          icon: Icons.check_circle_outline_rounded,
+          color: const Color(0xFF059669),
+          title: 'Course completed',
+          body: 'You finished all lessons in "${course.title}". Great work!',
+          occurredAt: lastWatchedAtFor?.call(course.id) ?? DateTime.now(),
+          route: '/courses/${course.id}',
+          isRead: readIds.contains('completed:${course.id}'),
         ),
       );
     }

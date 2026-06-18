@@ -97,7 +97,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       title: 'Join ',
       titleHighlight: 'Vidyank',
       subtitle:
-          'Your learning adventure starts here. Unlock premium courses, earn certificates, and grow at your own pace.',
+          'Your learning adventure starts here. Unlock premium courses and grow at your own pace.',
       footerText: 'Already have an account? ',
       footerAction: 'Log In',
       onFooterTap: () => context.pop(),

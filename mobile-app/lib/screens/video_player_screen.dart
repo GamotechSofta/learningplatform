@@ -14,14 +14,12 @@ import '../core/utils/course_playlist.dart';
 import '../core/utils/notification_sync.dart';
 import '../core/utils/video_playback.dart';
 import '../core/utils/video_playback_session.dart';
-import '../models/certificate.dart';
 import '../models/course.dart';
 import '../providers/auth_provider.dart';
 import '../providers/learning_progress_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/video_engagement_provider.dart';
 import '../services/course_service.dart';
-import '../widgets/certificate_card.dart';
 import '../widgets/error_view.dart';
 import '../widgets/page_app_bar.dart';
 import '../widgets/purchase_dialog.dart';
@@ -520,13 +518,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     if (!auth.isAuthenticated || auth.user == null) return;
 
     final progress = context.read<LearningProgressProvider>();
-    final certificate = await progress.markVideoWatched(
+    await progress.markVideoWatched(
       userId: auth.user!.id,
       course: course,
       lessonId: widget.lessonId,
       videoId: widget.videoId,
       isPurchased: _isPurchased,
-      studentName: auth.user!.name,
     );
 
     if (!mounted) return;
@@ -534,11 +531,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
     await syncUserNotifications(context);
 
     if (!mounted) return;
-
-    if (certificate != null) {
-      await _showCertificateDialog(certificate);
-      return;
-    }
 
     final next = _nextEntry;
     if (next != null && mounted) {
@@ -573,55 +565,6 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
       return;
     }
     _playVideo(entry);
-  }
-
-  Future<void> _showCertificateDialog(CourseCertificate certificate) async {
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: false,
-      builder: (dialogContext) {
-        final c = dialogContext.colors;
-        return AlertDialog(
-          contentPadding: const EdgeInsets.fromLTRB(16, 20, 16, 8),
-          content: SingleChildScrollView(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Congratulations!',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w800,
-                    color: c.textPrimary,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'You completed ${_course?.title ?? 'the course'}.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: c.textSecondary),
-                ),
-                const SizedBox(height: 16),
-                CertificateCard(certificate: certificate, compact: true),
-              ],
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(dialogContext).pop(),
-              child: const Text('Close'),
-            ),
-            FilledButton(
-              onPressed: () {
-                Navigator.of(dialogContext).pop();
-                context.push('/certificates/${certificate.id}');
-              },
-              child: const Text('View certificate'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   void _openCheckout() {

@@ -1,7 +1,5 @@
 import 'package:flutter/foundation.dart';
 
-import '../config/app_config.dart';
-import '../models/certificate.dart';
 import '../models/course.dart';
 import '../services/learning_progress_service.dart';
 
@@ -14,16 +12,12 @@ class LearningProgressProvider extends ChangeNotifier {
   Map<String, List<String>> _progress = {};
   Map<String, int> _courseTotals = {};
   Map<String, Map<String, dynamic>> _courseMeta = {};
-  List<CourseCertificate> _certificates = [];
-
-  List<CourseCertificate> get certificates => List.unmodifiable(_certificates);
 
   Future<void> loadForUser(String userId) async {
     _userId = userId;
     _progress = await _service.getProgress(userId);
     _courseTotals = await _service.getCourseTotals(userId);
     _courseMeta = await _service.getCourseMeta(userId);
-    _certificates = await _service.getCertificates(userId);
     notifyListeners();
   }
 
@@ -32,7 +26,6 @@ class LearningProgressProvider extends ChangeNotifier {
     _progress = {};
     _courseTotals = {};
     _courseMeta = {};
-    _certificates = [];
     notifyListeners();
   }
 
@@ -126,14 +119,6 @@ class LearningProgressProvider extends ChangeNotifier {
     return playableIds.every(watched.contains);
   }
 
-  CourseCertificate? certificateForCourse(String courseId) {
-    try {
-      return _certificates.firstWhere((cert) => cert.courseId == courseId);
-    } catch (_) {
-      return null;
-    }
-  }
-
   Future<void> ensureCourseTotal({
     required String userId,
     required String courseId,
@@ -148,13 +133,12 @@ class LearningProgressProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<CourseCertificate?> markVideoWatched({
+  Future<void> markVideoWatched({
     required String userId,
     required Course course,
     required String lessonId,
     required String videoId,
     required bool isPurchased,
-    required String studentName,
   }) async {
     if (_userId != userId) await loadForUser(userId);
 
@@ -175,24 +159,7 @@ class LearningProgressProvider extends ChangeNotifier {
     await _service.saveProgress(userId, _progress);
     await _service.saveCourseMeta(userId, _courseMeta);
 
-    CourseCertificate? issued;
-    if (isCourseComplete(course, isPurchased: isPurchased) &&
-        certificateForCourse(course.id) == null &&
-        _canEarnCertificate(course, isPurchased)) {
-      issued = await _issueCertificate(
-        userId: userId,
-        course: course,
-        studentName: studentName,
-      );
-    }
-
     notifyListeners();
-    return issued;
-  }
-
-  bool _canEarnCertificate(Course course, bool isPurchased) {
-    if (course.isPaid && !isPurchased) return false;
-    return true;
   }
 
   List<String> _playableVideoIds(Course course, bool isPurchased) {
@@ -210,34 +177,5 @@ class LearningProgressProvider extends ChangeNotifier {
         .where((video) => video.hasPlayableSource)
         .map((video) => video.id)
         .toList();
-  }
-
-  Future<CourseCertificate> _issueCertificate({
-    required String userId,
-    required Course course,
-    required String studentName,
-  }) async {
-    final now = DateTime.now();
-    final certificate = CourseCertificate(
-      id: 'cert_${course.id}_${now.millisecondsSinceEpoch}',
-      courseId: course.id,
-      courseTitle: course.title,
-      studentName: studentName,
-      issuedAt: now,
-      certificateNumber: _generateCertificateNumber(now),
-      instructorName: course.instructorName,
-      organization: AppConfig.appName,
-      totalVideos: course.videoCount,
-    );
-
-    _certificates = [certificate, ..._certificates];
-    await _service.saveCertificates(userId, _certificates);
-    return certificate;
-  }
-
-  String _generateCertificateNumber(DateTime date) {
-    final stamp = '${date.year}${date.month.toString().padLeft(2, '0')}${date.day.toString().padLeft(2, '0')}';
-    final suffix = date.millisecondsSinceEpoch % 100000;
-    return 'VID-$stamp-${suffix.toString().padLeft(5, '0')}';
   }
 }

@@ -5,7 +5,6 @@ import '../providers/auth_provider.dart';
 import '../providers/network_provider.dart';
 import '../core/utils/offline_routes.dart';
 import '../screens/category_detail_screen.dart';
-import '../screens/certificate_detail_screen.dart';
 import '../screens/checkout_screen.dart';
 import '../screens/course_detail_screen.dart';
 import '../screens/downloaded_videos_screen.dart';
@@ -126,12 +125,6 @@ class AppRouter {
           courseId: state.pathParameters['id']!,
           courseService: courseService,
           paymentService: paymentService,
-        ),
-      ),
-      GoRoute(
-        path: '/certificates/:id',
-        builder: (context, state) => CertificateDetailScreen(
-          certificateId: state.pathParameters['id']!,
         ),
       ),
       GoRoute(

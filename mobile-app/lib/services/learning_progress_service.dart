@@ -3,7 +3,6 @@ import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 
 import '../core/storage/secure_storage.dart';
-import '../models/certificate.dart';
 
 class LearningProgressService {
   LearningProgressService({FlutterSecureStorage? storage})
@@ -12,7 +11,6 @@ class LearningProgressService {
   final FlutterSecureStorage _storage;
 
   String _progressKey(String userId) => 'learning_progress_$userId';
-  String _certificatesKey(String userId) => 'learning_certificates_$userId';
   String _totalsKey(String userId) => 'learning_totals_$userId';
   String _metaKey(String userId) => 'learning_meta_$userId';
 
@@ -33,26 +31,6 @@ class LearningProgressService {
     await _storage.write(
       key: _progressKey(userId),
       value: jsonEncode(progress),
-    );
-  }
-
-  Future<List<CourseCertificate>> getCertificates(String userId) async {
-    final raw = await _storage.read(key: _certificatesKey(userId));
-    if (raw == null || raw.isEmpty) return [];
-
-    final decoded = jsonDecode(raw);
-    if (decoded is! List) return [];
-
-    return decoded
-        .whereType<Map>()
-        .map((item) => CourseCertificate.fromJson(Map<String, dynamic>.from(item)))
-        .toList();
-  }
-
-  Future<void> saveCertificates(String userId, List<CourseCertificate> certificates) async {
-    await _storage.write(
-      key: _certificatesKey(userId),
-      value: jsonEncode(certificates.map((c) => c.toJson()).toList()),
     );
   }
 

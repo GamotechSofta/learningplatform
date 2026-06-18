@@ -18,9 +18,9 @@ class HomeFeatureHighlights extends StatelessWidget {
       subtitle: 'Clear video playback on any device',
     ),
     _Feature(
-      icon: Icons.workspace_premium_outlined,
-      title: 'Certificates',
-      subtitle: 'Earn proof when you complete a course',
+      icon: Icons.trending_up_rounded,
+      title: 'Track progress',
+      subtitle: 'Resume lessons and pick up where you left off',
     ),
     _Feature(
       icon: Icons.devices_outlined,

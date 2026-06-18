@@ -75,7 +75,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     ),
                     SizedBox(height: 6),
                     Text(
-                      'Updates about your courses, progress, and certificates will appear here.',
+                      'Updates about your courses and progress will appear here.',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: c.textSecondary),
                     ),

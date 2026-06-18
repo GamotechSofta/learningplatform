@@ -66,7 +66,7 @@ class ProfileScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  'Sign in to track progress, enroll in courses, and earn certificates.',
+                  'Sign in to track progress and enroll in courses.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: c.textSecondary, height: 1.5),
                 ),
@@ -107,6 +107,9 @@ class ProfileScreen extends StatelessWidget {
       0,
       (sum, sub) => sum + progress.watchedCountFor(sub.course.id),
     );
+    final coursesCompleted = subs.activeSubscriptions
+        .where((sub) => progress.progressForCourse(sub.course.id, sub.course.videoCount) >= 1.0)
+        .length;
 
     return Scaffold(
       backgroundColor: c.background,
@@ -176,9 +179,9 @@ class ProfileScreen extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: _StatTile(
-                    icon: Icons.workspace_premium_outlined,
-                    value: '${progress.certificates.length}',
-                    label: 'Certs',
+                    icon: Icons.check_circle_outline_rounded,
+                    value: '$coursesCompleted',
+                    label: 'Completed',
                   ),
                 ),
               ],
@@ -244,11 +247,6 @@ class ProfileScreen extends StatelessWidget {
                   ? 'Watch offline in the app'
                   : '${downloads.downloadCount} saved',
               onTap: () => context.push('/downloads'),
-            ),
-            _ProfileMenuItem(
-              icon: Icons.help_outline_rounded,
-              title: 'Help & Support',
-              onTap: () {},
             ),
             const SizedBox(height: 12),
             _ProfileMenuItem(

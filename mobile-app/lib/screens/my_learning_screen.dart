@@ -135,8 +135,7 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
 
     final completed = purchased.where((sub) {
       final course = sub.course;
-      return progress.progressForCourse(course.id, course.videoCount) >= 1.0 ||
-          progress.certificateForCourse(course.id) != null;
+      return progress.progressForCourse(course.id, course.videoCount) >= 1.0;
     }).toList();
 
     final activeList = _tabIndex == 0 ? inProgress : completed;

@@ -9,14 +9,14 @@ class HomeLearningSnapshot extends StatelessWidget {
     super.key,
     required this.videosWatched,
     required this.coursesInProgress,
-    required this.certificatesEarned,
+    required this.coursesCompleted,
     this.learningTrack,
     this.onOpenLearning,
   });
 
   final int videosWatched;
   final int coursesInProgress;
-  final int certificatesEarned;
+  final int coursesCompleted;
   final String? learningTrack;
   final VoidCallback? onOpenLearning;
 
@@ -141,9 +141,9 @@ class HomeLearningSnapshot extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: _MetricTile(
-                    value: certificatesEarned.toString(),
-                    label: 'Certificates',
-                    icon: Icons.verified_outlined,
+                    value: coursesCompleted.toString(),
+                    label: 'Completed',
+                    icon: Icons.check_circle_outline_rounded,
                   ),
                 ),
               ],

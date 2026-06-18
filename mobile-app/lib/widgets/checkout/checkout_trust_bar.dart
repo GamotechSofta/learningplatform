@@ -20,7 +20,7 @@ class CheckoutTrustBar extends StatelessWidget {
         children: [
           Expanded(child: _TrustItem(icon: Icons.lock_rounded, label: 'Secure PayU')),
           Expanded(child: _TrustItem(icon: Icons.bolt_rounded, label: 'Instant access')),
-          Expanded(child: _TrustItem(icon: Icons.workspace_premium_outlined, label: 'Certificate')),
+          Expanded(child: _TrustItem(icon: Icons.all_inclusive_rounded, label: 'Full access')),
         ],
       ),
     );

@@ -32,7 +32,6 @@ Future<void> syncNotifications({
     userId: userId,
     input: NotificationBuildInput(
       enrolledCourses: enrolled,
-      certificates: progress.certificates,
       continueCourse: continueCourse,
       continueWatchedCount: continueWatched,
       continueTotalCount: continueTotal,
