@@ -13,6 +13,7 @@ import '../services/course_service.dart';
 import '../services/subscription_service.dart' show SubscriptionService, UserSubscription;
 import '../widgets/empty_state.dart';
 import '../widgets/home/continue_learning_tile.dart';
+import '../widgets/page_app_bar.dart';
 
 class MyLearningScreen extends StatefulWidget {
   const MyLearningScreen({
@@ -147,14 +148,21 @@ class _MyLearningScreenState extends State<MyLearningScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
-              padding: EdgeInsets.fromLTRB(20, 16, 20, 0),
-              child: Text(
-                'My Learning',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.w800,
-                  color: c.textPrimary,
-                ),
+              padding: const EdgeInsets.fromLTRB(12, 16, 20, 0),
+              child: Row(
+                children: [
+                  const TabPageBackButton(),
+                  Expanded(
+                    child: Text(
+                      'My Learning',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.w800,
+                        color: c.textPrimary,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
             SizedBox(height: 12),

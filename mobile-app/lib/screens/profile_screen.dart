@@ -13,6 +13,7 @@ import '../providers/saved_courses_provider.dart';
 import '../providers/subscription_provider.dart';
 import '../providers/theme_provider.dart';
 import '../providers/video_engagement_provider.dart';
+import '../widgets/page_app_bar.dart';
 
 class ProfileScreen extends StatelessWidget {
   const ProfileScreen({super.key});
@@ -33,11 +34,18 @@ class ProfileScreen extends StatelessWidget {
       return Scaffold(
         backgroundColor: c.background,
         body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
+          child: Column(
+            children: [
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: TabPageBackButton(),
+              ),
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
                 Container(
                   width: 88,
                   height: 88,
@@ -78,8 +86,11 @@ class ProfileScreen extends StatelessWidget {
                     child: const Text('Create account'),
                   ),
                 ),
-              ],
-            ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
         ),
       );
@@ -105,6 +116,7 @@ class ProfileScreen extends StatelessWidget {
           children: [
             Row(
               children: [
+                const TabPageBackButton(),
                 CircleAvatar(
                   radius: 38,
                   backgroundColor: c.primaryTint,

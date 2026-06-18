@@ -127,6 +127,14 @@ class Course {
       hasPurchased: hasPurchased,
     );
 
+    final hasPlayableFromLessons = lessons.isNotEmpty
+        ? lessons.any(
+            (lesson) => lesson.videos.any(
+              (video) => video.isPublished && video.hasPlayableSource,
+            ),
+          )
+        : null;
+
     return Course(
       id: json['_id']?.toString() ?? '',
       title: json['title']?.toString() ?? 'Untitled',
@@ -146,9 +154,10 @@ class Course {
       hasAccess: hasAccess,
       hasPurchased: hasPurchased,
       previewVideoCount: (json['previewVideoCount'] as num?)?.toInt() ?? 0,
-      hasPlayableVideos: json['hasPlayableVideos'] is bool
-          ? json['hasPlayableVideos'] as bool
-          : null,
+      hasPlayableVideos: hasPlayableFromLessons ??
+          (json['hasPlayableVideos'] is bool
+              ? json['hasPlayableVideos'] as bool
+              : null),
     );
   }
 

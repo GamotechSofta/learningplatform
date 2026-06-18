@@ -18,6 +18,7 @@ import '../services/course_service.dart';
 import '../services/payment_service.dart';
 import '../widgets/checkout/checkout_trust_bar.dart';
 import '../widgets/error_view.dart';
+import '../widgets/page_app_bar.dart';
 import '../widgets/thumbnail_image.dart';
 
 class CheckoutScreen extends StatefulWidget {
@@ -188,7 +189,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final c = context.colors;
     return Scaffold(
       backgroundColor: c.background,
-      appBar: AppBar(
+      appBar: PageAppBar(
         backgroundColor: c.background,
         title: const Text('Checkout'),
       ),

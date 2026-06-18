@@ -1,4 +1,5 @@
 import '../core/api/api_client.dart';
+import '../core/cache/app_data_cache.dart';
 import '../models/course.dart';
 
 class UserSubscription {
@@ -18,7 +19,12 @@ class UserSubscription {
   final String currency;
   final DateTime? endDate;
 
-  bool get isActive => status == 'active';
+  bool get isActive {
+    if (status != 'active') return false;
+    final end = endDate;
+    if (end != null && !end.isAfter(DateTime.now())) return false;
+    return course.id.isNotEmpty;
+  }
 
   String get planLabel {
     switch (plan) {
@@ -57,15 +63,59 @@ class SubscriptionService {
   SubscriptionService(this._api);
 
   final ApiClient _api;
+  final AppDataCache _cache = AppDataCache.instance;
 
-  Future<List<UserSubscription>> getUserSubscriptions(String userId) async {
-    return _api.getData(
-      '/api/users/$userId/subscriptions',
-      parser: (data) => _api.parseList(
-        data,
-        (json) => UserSubscription.fromJson(json),
-      ),
-    );
+  String _diskKey(String userId) => 'user_subscriptions_$userId';
+
+  List<UserSubscription> _parseSubscriptions(List<Map<String, dynamic>> raw) {
+    return raw.map(UserSubscription.fromJson).where((sub) => sub.isActive).toList();
+  }
+
+  Future<List<UserSubscription>> getSubscriptionsFromDisk(String userId) async {
+    final disk = await _cache.disk();
+    final raw = await disk.readList(_diskKey(userId), AppDataCache.diskMaxAge);
+    if (raw == null) return [];
+    return _parseSubscriptions(raw);
+  }
+
+  Future<List<UserSubscription>> getUserSubscriptions(
+    String userId, {
+    bool forceRefresh = false,
+  }) async {
+    final cacheKey = _diskKey(userId);
+
+    if (!forceRefresh) {
+      final fromMemory = _cache.memory.peek<List<UserSubscription>>(
+        cacheKey,
+        AppDataCache.courseDetailTtl,
+      );
+      if (fromMemory != null && fromMemory.isNotEmpty) {
+        return fromMemory;
+      }
+    }
+
+    try {
+      return await _cache.memory.resolve(
+        key: cacheKey,
+        ttl: AppDataCache.courseDetailTtl,
+        forceRefresh: forceRefresh,
+        fetch: () async {
+          final raw = await _api.getRawList('/api/users/$userId/subscriptions');
+          await (await _cache.disk()).writeList(cacheKey, raw);
+          return _parseSubscriptions(raw);
+        },
+      );
+    } catch (error) {
+      if (!forceRefresh) {
+        final fromDisk = await getSubscriptionsFromDisk(userId);
+        if (fromDisk.isNotEmpty) return fromDisk;
+      }
+      rethrow;
+    }
+  }
+
+  void invalidateUser(String userId) {
+    _cache.memory.invalidate(_diskKey(userId));
   }
 
   Future<UserSubscription> purchaseCourse({
@@ -73,7 +123,7 @@ class SubscriptionService {
     required String courseId,
     required String plan,
   }) async {
-    return _api.postData(
+    final created = await _api.postData(
       '/api/users/$userId/subscriptions/purchase',
       body: {
         'courseId': courseId,
@@ -81,5 +131,7 @@ class SubscriptionService {
       },
       parser: (data) => UserSubscription.fromJson(Map<String, dynamic>.from(data as Map)),
     );
+    invalidateUser(userId);
+    return created;
   }
 }

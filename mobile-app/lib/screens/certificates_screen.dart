@@ -9,6 +9,7 @@ import '../models/certificate.dart';
 import '../providers/auth_provider.dart';
 import '../providers/learning_progress_provider.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/page_app_bar.dart';
 
 class CertificatesScreen extends StatelessWidget {
   const CertificatesScreen({super.key});
@@ -36,36 +37,29 @@ class CertificatesScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: c.background,
-      body: SafeArea(
-        child: certificates.isEmpty
-            ? const EmptyState(
-                title: 'No certificates yet',
-                subtitle: 'Finish all videos in a purchased course to earn your certificate.',
-                icon: Icons.workspace_premium_outlined,
-              )
-            : ListView(
-                padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
-                children: [
-                  Text(
-                    'My Certificates',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: c.textPrimary,
-                    ),
-                  ),
-                  SizedBox(height: 6),
-                  Text(
-                    '${certificates.length} earned',
-                    style: TextStyle(color: c.textSecondary),
-                  ),
-                  const SizedBox(height: 20),
-                  ...certificates.map(
-                    (certificate) => _CertificateListItem(certificate: certificate),
-                  ),
-                ],
-              ),
+      appBar: PageAppBar(
+        backgroundColor: c.background,
+        title: const Text('My Certificates'),
       ),
+      body: certificates.isEmpty
+          ? const EmptyState(
+              title: 'No certificates yet',
+              subtitle: 'Finish all videos in a purchased course to earn your certificate.',
+              icon: Icons.workspace_premium_outlined,
+            )
+          : ListView(
+              padding: const EdgeInsets.fromLTRB(20, 8, 20, 24),
+              children: [
+                Text(
+                  '${certificates.length} earned',
+                  style: TextStyle(color: c.textSecondary),
+                ),
+                const SizedBox(height: 16),
+                ...certificates.map(
+                  (certificate) => _CertificateListItem(certificate: certificate),
+                ),
+              ],
+            ),
     );
   }
 }

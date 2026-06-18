@@ -14,6 +14,7 @@ import lessonRoutes from "./routes/lessonRoutes.js";
 import videoRoutes from "./routes/videoRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
+import catalogRoutes from "./routes/catalogRoutes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -41,6 +42,7 @@ app.use("/api/lessons", lessonRoutes);
 app.use("/api/videos", videoRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/payments", paymentRoutes);
+app.use("/api/catalog", catalogRoutes);
 
 app.use(errorHandler);
 

@@ -21,7 +21,7 @@ class RecommendedCourseCard extends StatelessWidget {
 
   static const cardWidth = 268.0;
   static const imageHeight = 150.0;
-  static const cardHeight = 300.0;
+  static const cardHeight = 312.0;
 
   @override
   Widget build(BuildContext context) {
@@ -65,7 +65,7 @@ class RecommendedCourseCard extends StatelessWidget {
                 ),
                 Expanded(
                   child: Padding(
-                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+                    padding: const EdgeInsets.fromLTRB(14, 10, 14, 10),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
@@ -76,13 +76,13 @@ class RecommendedCourseCard extends StatelessWidget {
                           style: theme.textTheme.titleSmall?.copyWith(
                             fontWeight: FontWeight.w700,
                             color: c.textPrimary,
-                            height: 1.35,
+                            height: 1.3,
                             letterSpacing: -0.15,
                           ),
                         ),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         CourseRatingStars(course: course),
-                        const SizedBox(height: 6),
+                        const SizedBox(height: 4),
                         Text(
                           _metaLine(course),
                           maxLines: 1,
@@ -98,30 +98,19 @@ class RecommendedCourseCard extends StatelessWidget {
                           thickness: 1,
                           color: c.border.withValues(alpha: 0.55),
                         ),
-                        const SizedBox(height: 10),
+                        const SizedBox(height: 8),
                         Row(
                           children: [
                             Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    _priceLabel(course),
-                                    style: theme.textTheme.titleSmall?.copyWith(
-                                      fontWeight: FontWeight.w800,
-                                      color: _priceColor(course),
-                                      letterSpacing: -0.2,
-                                    ),
-                                  ),
-                                  if (!course.pricing.isPaid)
-                                    Text(
-                                      'No payment required',
-                                      style: theme.textTheme.labelSmall?.copyWith(
-                                        color: c.textSecondary,
-                                        fontWeight: FontWeight.w500,
-                                      ),
-                                    ),
-                                ],
+                              child: Text(
+                                _priceLabel(course),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.titleSmall?.copyWith(
+                                  fontWeight: FontWeight.w800,
+                                  color: _priceColor(course),
+                                  letterSpacing: -0.2,
+                                ),
                               ),
                             ),
                             SaveCourseButton(

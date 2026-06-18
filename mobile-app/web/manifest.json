@@ -1,11 +1,11 @@
 {
-    "name": "vidyank",
-    "short_name": "vidyank",
+    "name": "Vidyank",
+    "short_name": "Vidyank",
     "start_url": ".",
     "display": "standalone",
-    "background_color": "#0175C2",
-    "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "background_color": "#00BF63",
+    "theme_color": "#00BF63",
+    "description": "Vidyank learning platform",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

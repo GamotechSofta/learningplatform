@@ -79,6 +79,10 @@ class CategoryService {
     _cache.memory.invalidate(_publishedKey);
   }
 
+  void invalidateAllDetails() {
+    _cache.memory.invalidatePrefix('category_full_');
+  }
+
   Future<List<Category>> search(String query) async {
     if (query.trim().isEmpty) return [];
 

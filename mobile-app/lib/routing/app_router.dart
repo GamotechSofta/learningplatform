@@ -20,6 +20,7 @@ import '../services/category_service.dart';
 import '../services/course_service.dart';
 import '../services/payment_service.dart';
 import '../services/subscription_service.dart';
+import '../widgets/page_app_bar.dart';
 
 class AppRouter {
   AppRouter({
@@ -144,7 +145,7 @@ class AppRouter {
       ),
     ],
     errorBuilder: (context, state) => Scaffold(
-      appBar: AppBar(title: const Text('Not found')),
+      appBar: const PageAppBar(title: Text('Not found')),
       body: Center(child: Text(state.error?.toString() ?? 'Page not found')),
     ),
   );

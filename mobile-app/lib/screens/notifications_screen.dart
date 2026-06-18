@@ -8,6 +8,7 @@ import '../core/utils/notification_builder.dart';
 import '../models/app_notification.dart';
 import '../providers/notification_provider.dart';
 import '../core/utils/notification_sync.dart';
+import '../widgets/page_app_bar.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({super.key});
@@ -33,7 +34,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
 
     return Scaffold(
       backgroundColor: c.background,
-      appBar: AppBar(
+      appBar: PageAppBar(
         backgroundColor: c.background,
         title: const Text('Notifications'),
         actions: [

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/themed_colors.dart';
 import '../services/category_service.dart';
+import '../widgets/page_app_bar.dart';
 import 'search_screen.dart';
 
 class SearchPage extends StatelessWidget {
@@ -14,8 +15,8 @@ class SearchPage extends StatelessWidget {
     final c = context.colors;
     return Scaffold(
       backgroundColor: c.background,
-      appBar: AppBar(
-        title: Text('Search'),
+      appBar: PageAppBar(
+        title: const Text('Search'),
         backgroundColor: c.background,
       ),
       body: SearchScreen(categoryService: categoryService),

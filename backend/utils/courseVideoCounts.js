@@ -1,5 +1,7 @@
 import Video from "../models/video.js";
+import { PLAYABLE_MEDIA_OR } from "./coursePlayability.js";
 
+/** Count only published videos with usable, non-corrupt media metadata. */
 export const attachVideoCounts = async (courses) => {
   if (!courses?.length) return courses;
 
@@ -14,7 +16,14 @@ export const attachVideoCounts = async (courses) => {
       },
     },
     { $unwind: "$lessonDoc" },
-    { $match: { "lessonDoc.course": { $in: courseIds }, isPublished: true } },
+    {
+      $match: {
+        "lessonDoc.course": { $in: courseIds },
+        isPublished: true,
+        mediaValid: { $ne: false },
+        $or: PLAYABLE_MEDIA_OR,
+      },
+    },
     {
       $group: {
         _id: "$lessonDoc.course",

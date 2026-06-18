@@ -7,12 +7,9 @@ class SubscriptionProvider extends ChangeNotifier {
 
   final SubscriptionService _subscriptionService;
 
-  static const _refreshCooldown = Duration(minutes: 5);
-
   final Set<String> _activeCourseIds = {};
   List<UserSubscription> _subscriptions = [];
   bool _loading = false;
-  DateTime? _lastRefreshAt;
 
   bool get loading => _loading;
   Set<String> get activeCourseIds => Set.unmodifiable(_activeCourseIds);
@@ -21,14 +18,19 @@ class SubscriptionProvider extends ChangeNotifier {
 
   bool hasAccess(String courseId) => _activeCourseIds.contains(courseId);
 
-  Future<void> refresh(String userId, {bool forceRefresh = false}) async {
-    if (!forceRefresh &&
-        _lastRefreshAt != null &&
-        _subscriptions.isNotEmpty &&
-        DateTime.now().difference(_lastRefreshAt!) < _refreshCooldown) {
-      return;
-    }
+  void _applySubscriptions(List<UserSubscription> subs) {
+    _subscriptions = subs;
+    _activeCourseIds
+      ..clear()
+      ..addAll(
+        subs
+            .where((sub) => sub.isActive)
+            .map((sub) => sub.course.id)
+            .where((id) => id.isNotEmpty),
+      );
+  }
 
+  Future<void> refresh(String userId, {bool forceRefresh = false}) async {
     if (_loading && !forceRefresh) return;
 
     if (_loading && forceRefresh) {
@@ -41,19 +43,18 @@ class SubscriptionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final subs = await _subscriptionService.getUserSubscriptions(userId);
-      _subscriptions = subs;
-      _activeCourseIds
-        ..clear()
-        ..addAll(
-          subs
-              .where((sub) => sub.isActive)
-              .map((sub) => sub.course.id)
-              .where((id) => id.isNotEmpty),
-        );
-      _lastRefreshAt = DateTime.now();
+      final subs = await _subscriptionService.getUserSubscriptions(
+        userId,
+        forceRefresh: forceRefresh,
+      );
+      _applySubscriptions(subs);
     } catch (_) {
-      // Keep the last known subscriptions when refresh fails.
+      if (_subscriptions.isEmpty) {
+        final fromDisk = await _subscriptionService.getSubscriptionsFromDisk(userId);
+        if (fromDisk.isNotEmpty) {
+          _applySubscriptions(fromDisk);
+        }
+      }
     }
 
     _loading = false;
@@ -70,19 +71,18 @@ class SubscriptionProvider extends ChangeNotifier {
       courseId: courseId,
       plan: plan,
     );
+    _subscriptionService.invalidateUser(userId);
     _activeCourseIds.add(courseId);
     _subscriptions = [
       created,
       ..._subscriptions.where((sub) => sub.course.id != courseId),
     ];
-    _lastRefreshAt = DateTime.now();
     notifyListeners();
   }
 
   void clear() {
     _activeCourseIds.clear();
     _subscriptions = [];
-    _lastRefreshAt = null;
     notifyListeners();
   }
 }

@@ -6,6 +6,7 @@ import '../core/constants/learning_tracks.dart';
 import '../core/theme/app_colors.dart';
 import '../core/theme/themed_colors.dart';
 import '../providers/auth_provider.dart';
+import '../widgets/page_app_bar.dart';
 
 class LearningTrackOnboardingScreen extends StatefulWidget {
   const LearningTrackOnboardingScreen({super.key});
@@ -39,7 +40,12 @@ class _LearningTrackOnboardingScreenState
 
     return Scaffold(
       backgroundColor: c.background,
+      appBar: PageAppBar(
+        backgroundColor: c.background,
+        title: const Text('Learning goal'),
+      ),
       body: SafeArea(
+        top: false,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [

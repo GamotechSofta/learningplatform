@@ -34,8 +34,8 @@ async function main() {
   // Admin panel uses GET /api/courses (no published filter)
   const adminApiCount = allCourses.length;
 
-  // App uses GET /api/courses?published=true + hasPlayableVideos filter
-  const appApiCount = appListable.length;
+  // Public website/app uses GET /api/courses?published=true (all published courses)
+  const publicApiCount = publishedCourses.length;
 
   console.log(JSON.stringify({
     adminPanel: {
@@ -43,13 +43,16 @@ async function main() {
       published: publishedCourses.length,
       drafts: draftCourses.length,
     },
-    mobileAppCoursesPage: {
-      listableCourses: appApiCount,
+    websiteAndApp: {
+      publishedCourses: publicApiCount,
+      note: "All published courses (includes those still uploading videos)",
+    },
+    withPlayableVideosOnly: {
+      count: appListable.length,
       note: "Published courses with at least one published playable video",
     },
     gap: {
-      hiddenFromApp: adminApiCount - appApiCount,
-      publishedButHidden: publishedNoPlayable.length,
+      publishedWithoutPlayableVideo: publishedNoPlayable.length,
       draftsHidden: draftCourses.length,
     },
     publishedButNotInApp: publishedNoPlayable.map((c) => ({

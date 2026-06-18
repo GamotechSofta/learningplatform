@@ -13,6 +13,7 @@ import '../providers/subscription_provider.dart';
 import '../services/course_service.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/error_view.dart';
+import '../widgets/page_app_bar.dart';
 import '../widgets/purchase_dialog.dart';
 import '../widgets/save_course_button.dart';
 import '../widgets/thumbnail_image.dart';
@@ -171,7 +172,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
+      appBar: PageAppBar(
         title: const Text('Course'),
         actions: [
           if (_course != null)
@@ -203,8 +204,7 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    if (!CoursePlayability.isListable(rawCourse) ||
-        rawCourse.lessons.every((l) => l.videos.isEmpty)) {
+    if (!CoursePlayability.isListable(rawCourse)) {
       return const EmptyState(
         title: 'Course unavailable',
         subtitle:

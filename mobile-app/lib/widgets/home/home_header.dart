@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
-import '../../config/app_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/themed_colors.dart';
 import '../../navigation/main_shell_scope.dart';
@@ -30,17 +29,7 @@ class HomeHeader extends StatelessWidget {
               side: BorderSide(color: c.border),
             ),
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Text(
-              AppConfig.appName,
-              style: TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w800,
-                color: c.textPrimary,
-              ),
-            ),
-          ),
+          const Spacer(),
           const NotificationBellButton(),
           const SizedBox(width: 8),
           GestureDetector(

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 
-import '../../config/app_config.dart';
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/themed_colors.dart';
-
+import '../app_logo.dart';
+import '../page_app_bar.dart';
 class AuthScreenLayout extends StatelessWidget {
   const AuthScreenLayout({
     super.key,
@@ -153,29 +153,21 @@ class _AuthHeader extends StatelessWidget {
               color: Colors.white.withValues(alpha: 0.08),
             ),
           ),
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topLeft,
+              child: PageBackButton(
+                color: Colors.white,
+                onPressed: () => navigateBack(context),
+              ),
+            ),
+          ),
           Center(
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const SizedBox(height: 20),
-                Text(
-                  AppConfig.appName.toUpperCase(),
-                  style: const TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.w900,
-                    color: Colors.white,
-                    letterSpacing: 2.5,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Container(
-                  width: 44,
-                  height: 3,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.85),
-                    borderRadius: BorderRadius.circular(99),
-                  ),
-                ),
+                const AppLogo(height: 72),
                 const SizedBox(height: 8),
                 Text(
                   'Learn • Grow • Succeed',

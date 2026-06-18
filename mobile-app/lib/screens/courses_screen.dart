@@ -10,6 +10,7 @@ import '../providers/catalog_provider.dart';
 import '../widgets/course_card.dart';
 import '../widgets/courses/course_filter_bar.dart';
 import '../widgets/dismiss_focus_on_tap.dart';
+import '../widgets/page_app_bar.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/error_view.dart';
 import '../widgets/skeleton/course_list_skeleton.dart';
@@ -245,42 +246,55 @@ class _CoursesHeader extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(20, 16, 20, 16),
+      padding: const EdgeInsets.fromLTRB(12, 16, 20, 16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'Explore Courses',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              color: c.textPrimary,
-              letterSpacing: -0.3,
-            ),
+          Row(
+            children: [
+              const TabPageBackButton(),
+              Expanded(
+                child: Text(
+                  'Explore Courses',
+                  style: theme.textTheme.headlineSmall?.copyWith(
+                    fontWeight: FontWeight.w800,
+                    color: c.textPrimary,
+                    letterSpacing: -0.3,
+                  ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: 6),
-          Text(
-            totalCount == 0
-                ? 'Browse our full course library'
-                : hasActiveFilters
-                    ? 'Showing $filteredCount of $totalCount courses'
-                    : '$totalCount course${totalCount == 1 ? '' : 's'} available',
-            style: theme.textTheme.bodyMedium?.copyWith(
-              color: c.textSecondary,
-              height: 1.4,
+          Padding(
+            padding: const EdgeInsets.only(left: 48),
+            child: Text(
+              totalCount == 0
+                  ? 'Browse our full course library'
+                  : hasActiveFilters
+                      ? 'Showing $filteredCount of $totalCount courses'
+                      : '$totalCount course${totalCount == 1 ? '' : 's'} available',
+              style: theme.textTheme.bodyMedium?.copyWith(
+                color: c.textSecondary,
+                height: 1.4,
+              ),
             ),
           ),
           if (hasActiveFilters) ...[
             const SizedBox(height: 10),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: onClearFilters,
-                icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
-                label: const Text('Clear all filters'),
-                style: TextButton.styleFrom(
-                  foregroundColor: AppColors.primary,
-                  padding: EdgeInsets.zero,
-                  textStyle: const TextStyle(fontWeight: FontWeight.w700),
+            Padding(
+              padding: const EdgeInsets.only(left: 48),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton.icon(
+                  onPressed: onClearFilters,
+                  icon: const Icon(Icons.filter_alt_off_outlined, size: 18),
+                  label: const Text('Clear all filters'),
+                  style: TextButton.styleFrom(
+                    foregroundColor: AppColors.primary,
+                    padding: EdgeInsets.zero,
+                    textStyle: const TextStyle(fontWeight: FontWeight.w700),
+                  ),
                 ),
               ),
             ),

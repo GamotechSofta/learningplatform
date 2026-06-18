@@ -1,7 +1,8 @@
 class AppAssets {
   AppAssets._();
 
-  static const String logo = 'assets/images/logo.png';
+  static const String logo = 'assets/images/appIcon.png';
+  static const String appIcon = 'assets/images/appIcon.png';
 
   static const String lockedVideoThumbnail = 'assets/images/blureBanner.png';
 

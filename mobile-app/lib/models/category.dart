@@ -1,3 +1,4 @@
+import '../core/utils/course_playability.dart';
 import '../core/utils/media_url.dart';
 import 'course.dart';
 
@@ -31,9 +32,7 @@ class Category {
                 includeAllPlayable: true,
               ),
             )
-            .where(
-              (c) => c.isPublished && c.hasPlayableVideos != false,
-            )
+            .where(CoursePlayability.isListable)
             .toList()
         : <Course>[];
 

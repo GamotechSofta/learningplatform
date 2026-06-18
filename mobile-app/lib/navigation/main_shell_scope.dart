@@ -17,6 +17,10 @@ class MainShellScope extends InheritedWidget {
     return scope!;
   }
 
+  static MainShellScope? maybeOf(BuildContext context) {
+    return context.dependOnInheritedWidgetOfExactType<MainShellScope>();
+  }
+
   @override
   bool updateShouldNotify(MainShellScope oldWidget) =>
       selectTab != oldWidget.selectTab || openDrawer != oldWidget.openDrawer;

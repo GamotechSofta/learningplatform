@@ -15,7 +15,7 @@ class VideoPlayback {
     return lower.contains('.m3u8');
   }
 
-  /// Progressive MP4 from CloudFront (HTTP range requests). HLS only when explicitly ready.
+  /// Prefer progressive MP4 for in-app playback; use HLS only when no MP4 is available.
   static String resolvePlaybackSource({
     String? hlsUrl,
     String? mp4Url,
@@ -23,11 +23,16 @@ class VideoPlayback {
   }) {
     final mp4 = resolveUrl(mp4Url);
     final hls = resolveUrl(hlsUrl);
-    final hlsReady = streamingStatus == 'ready';
 
+    if (mp4.isNotEmpty && !isHlsManifest(mp4)) {
+      return mp4;
+    }
+
+    final hlsReady = streamingStatus == 'ready';
     if (hlsReady && hls.isNotEmpty && isHlsManifest(hls)) {
       return hls;
     }
+
     return mp4;
   }
 

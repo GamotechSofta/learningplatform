@@ -9,9 +9,10 @@ import {
 import { resolveMediaUrl } from "../utils/mediaUrl.js";
 import { applyCourseAccess, isPaidCourse } from "../utils/courseAccess.js";
 import {
-  annotateCoursesWithPlayableMedia,
   courseDataHasPlayableVideos,
+  filterCoursesWithPlayableMedia,
   filterUnplayableVideosFromCourseData,
+  isPlayableVideoDoc,
   PLAYABLE_MEDIA_OR,
 } from "../utils/coursePlayability.js";
 import {
@@ -160,15 +161,12 @@ export const getCourses = asyncHandler(async (req, res) => {
 
   const mapped = await mapCourseList(courses);
   const withCounts = await attachVideoCounts(mapped);
-  const annotated =
-    req.query.published === "true"
-      ? await annotateCoursesWithPlayableMedia(withCounts)
-      : withCounts;
   const data =
     req.query.published === "true"
-      ? annotated.filter((course) => course.hasPlayableVideos !== false)
-      : annotated;
+      ? await filterCoursesWithPlayableMedia(withCounts)
+      : withCounts;
 
+  res.set("Cache-Control", "no-store");
   res.json({ success: true, count: data.length, data });
 });
 
@@ -221,6 +219,11 @@ export const getVideoPlayback = asyncHandler(async (req, res) => {
   if (!video.isPublished) {
     res.status(404);
     throw new Error("Video is not published");
+  }
+
+  if (!isPlayableVideoDoc(video)) {
+    res.status(404);
+    throw new Error("Video is not available");
   }
 
   const course = await Course.findById(courseId);
@@ -287,6 +290,11 @@ export const getCourseWithLessons = asyncHandler(async (req, res) => {
   courseData.hasPlayableVideos = courseDataHasPlayableVideos(courseData);
   courseData.isPaid = isPaidCourse(courseData);
   applyCourseAccess(courseData, req.user);
+
+  if (publishedOnly && !courseData.hasPlayableVideos) {
+    res.status(404);
+    throw new Error("Course not found");
+  }
 
   res.json({ success: true, data: courseData });
 });

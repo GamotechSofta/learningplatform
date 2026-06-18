@@ -8,6 +8,7 @@ import '../services/category_service.dart';
 import '../widgets/course_card.dart';
 import '../widgets/empty_state.dart';
 import '../widgets/error_view.dart';
+import '../widgets/page_app_bar.dart';
 import '../widgets/thumbnail_image.dart';
 
 class CategoryDetailScreen extends StatefulWidget {
@@ -46,7 +47,7 @@ class _CategoryDetailScreenState extends State<CategoryDetailScreen> {
   Widget build(BuildContext context) {
     final c = context.colors;
     return Scaffold(
-      appBar: AppBar(title: Text('Category')),
+      appBar: PageAppBar(title: const Text('Category')),
       body: FutureBuilder<Category>(
         future: _future,
         builder: (context, snapshot) {

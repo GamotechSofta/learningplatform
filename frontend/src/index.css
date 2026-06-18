@@ -1,0 +1,45 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+@theme {
+  --color-background: #f8fafc;
+  --color-surface: #ffffff;
+  --color-surface-elevated: #ffffff;
+  --color-primary: #00bf63;
+  --color-primary-dark: #009a50;
+  --color-primary-light: #ecfdf5;
+  --color-primary-tint-border: #d1fae5;
+  --color-accent-green: #16a34a;
+  --color-accent-gold: #ffb300;
+  --color-border: #e2e8f0;
+  --color-border-light: #f1f5f9;
+  --color-text-primary: #0f172a;
+  --color-text-secondary: #64748b;
+  --color-input-fill: #f8fafc;
+  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
+}
+
+/* Vidyank dark palette — matches mobile app */
+.dark {
+  --color-background: #0b1120;
+  --color-surface: #151d2e;
+  --color-surface-elevated: #1c2738;
+  --color-primary-light: #0f2d22;
+  --color-primary-tint-border: #1a4d38;
+  --color-border: #2a3548;
+  --color-border-light: #222d40;
+  --color-text-primary: #e8edf5;
+  --color-text-secondary: #8b9bb5;
+  --color-input-fill: #1a2332;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    @apply bg-background text-text-primary font-sans antialiased;
+  }
+}

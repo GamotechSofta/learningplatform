@@ -125,6 +125,11 @@ class CourseService {
     _cache.memory.invalidate(_publishedKey);
   }
 
+  void invalidateAllDetails() {
+    _cache.memory.invalidatePrefix('course_full_');
+    _cache.memory.invalidatePrefix('playback_');
+  }
+
   void invalidateCoursePlayback(String courseId) {
     _cache.memory.invalidatePrefix('playback_${courseId}_');
   }

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../core/theme/themed_colors.dart';
 import '../providers/learning_progress_provider.dart';
 import '../widgets/certificate_card.dart';
+import '../widgets/page_app_bar.dart';
 
 class CertificateDetailScreen extends StatelessWidget {
   const CertificateDetailScreen({
@@ -23,9 +24,9 @@ class CertificateDetailScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: c.background,
-      appBar: AppBar(
+      appBar: PageAppBar(
         backgroundColor: c.background,
-        title: Text('Certificate'),
+        title: const Text('Certificate'),
       ),
       body: certificate == null
           ? Center(child: Text('Certificate not found'))

@@ -26,8 +26,10 @@ import 'services/payment_service.dart';
 import 'services/subscription_service.dart';
 import 'services/video_download_service.dart';
 import 'services/video_engagement_service.dart';
+import 'services/catalog_sync_service.dart';
 import 'core/utils/notification_sync.dart';
 import 'widgets/offline_listener.dart';
+import 'widgets/catalog_sync_listener.dart';
 
 class VidyankApp extends StatefulWidget {
   const VidyankApp({super.key});
@@ -56,6 +58,7 @@ class _VidyankAppState extends State<VidyankApp> {
   NetworkProvider? _networkProvider;
   ThemeProvider? _themeProvider;
   AppRouter? _appRouter;
+  CatalogSyncService? _catalogSync;
 
   SavedCoursesProvider get _savedCourses {
     _savedCoursesProvider ??= SavedCoursesProvider(SavedCoursesService());
@@ -89,6 +92,16 @@ class _VidyankAppState extends State<VidyankApp> {
       VideoDownloadService(),
     );
     return _videoEngagementProvider!;
+  }
+
+  CatalogSyncService get _catalogSyncService {
+    _catalogSync ??= CatalogSyncService(
+      api: _apiClient,
+      catalogProvider: _catalog,
+      categoryService: _categoryService,
+      courseService: _courseService,
+    );
+    return _catalogSync!;
   }
 
   @override
@@ -150,7 +163,7 @@ class _VidyankAppState extends State<VidyankApp> {
     final user = _authProvider.user;
     if (user != null) {
       await Future.wait([
-        _subscriptionProvider.refresh(user.id),
+        _subscriptionProvider.refresh(user.id, forceRefresh: true),
         _learningProgressProvider.loadForUser(user.id),
         _savedCourses.loadForUser(user.id),
         _notifications.loadForUser(user.id),
@@ -199,8 +212,11 @@ class _VidyankAppState extends State<VidyankApp> {
               );
             }
 
-            return OfflineListener(
-              child: child ?? const SizedBox.shrink(),
+            return CatalogSyncListener(
+              sync: _catalogSyncService,
+              child: OfflineListener(
+                child: child ?? const SizedBox.shrink(),
+              ),
             );
           },
         ),

@@ -3,7 +3,7 @@ import Course from "../models/course.js";
 import asyncHandler from "../middleware/asyncHandler.js";
 import { resolveMediaUrl } from "../utils/mediaUrl.js";
 import { attachFallbackThumbnails } from "../utils/courseThumbnail.js";
-import { annotateCoursesWithPlayableMedia, getPlayableCourseIdSet } from "../utils/coursePlayability.js";
+import { filterCoursesWithPlayableMedia } from "../utils/coursePlayability.js";
 import { isPaidCourse } from "../utils/courseAccess.js";
 
 export const createCategory = asyncHandler(async (req, res) => {
@@ -32,13 +32,8 @@ export const getCategories = asyncHandler(async (req, res) => {
       .select("_id category")
       .lean();
 
-    const playableIds = await getPlayableCourseIdSet(
-      publishedCourses.map((course) => course._id)
-    );
-
     publishedCountMap = {};
     for (const course of publishedCourses) {
-      if (!playableIds.has(course._id.toString())) continue;
       const catId = course.category.toString();
       publishedCountMap[catId] = (publishedCountMap[catId] || 0) + 1;
     }
@@ -53,6 +48,7 @@ export const getCategories = asyncHandler(async (req, res) => {
     return output;
   });
 
+  res.set("Cache-Control", "no-store");
   res.json({ success: true, count: data.length, data });
 });
 
@@ -115,12 +111,9 @@ export const searchCategories = asyncHandler(async (req, res) => {
     if (publishedOnly) {
       courses = courses.filter((course) => course.isPublished);
     }
-    const annotated = publishedOnly
-      ? await annotateCoursesWithPlayableMedia(courses)
-      : courses;
     categoryData.courses = publishedOnly
-      ? annotated.filter((course) => course.hasPlayableVideos !== false)
-      : annotated;
+      ? await filterCoursesWithPlayableMedia(courses)
+      : courses;
     if (publishedOnly && categoryData.courses.length === 0) continue;
     data.push(categoryData);
   }
@@ -169,14 +162,10 @@ export const getCoursesByCategory = asyncHandler(async (req, res) => {
     .sort({ createdAt: -1 });
 
   const withThumbs = await attachFallbackThumbnails(courses);
-  const annotated =
-    req.query.published === "true"
-      ? await annotateCoursesWithPlayableMedia(withThumbs)
-      : withThumbs;
   const data =
     req.query.published === "true"
-      ? annotated.filter((course) => course.hasPlayableVideos !== false)
-      : annotated;
+      ? await filterCoursesWithPlayableMedia(withThumbs)
+      : withThumbs;
   res.json({ success: true, count: data.length, data });
 });
 
@@ -224,12 +213,9 @@ export const getCategoryFull = asyncHandler(async (req, res) => {
 
   const withThumbs = await attachFallbackThumbnails(courses);
   categoryData.thumbnail = resolveMediaUrl(categoryData.thumbnail);
-  const annotated = publishedOnly
-    ? await annotateCoursesWithPlayableMedia(withThumbs)
-    : withThumbs;
   categoryData.courses = publishedOnly
-    ? annotated.filter((course) => course.hasPlayableVideos !== false)
-    : annotated;
+    ? await filterCoursesWithPlayableMedia(withThumbs)
+    : withThumbs;
   if (publishedOnly) {
     categoryData.coursesCount = categoryData.courses.length;
   }

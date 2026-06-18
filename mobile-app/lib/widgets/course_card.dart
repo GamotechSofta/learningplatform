@@ -50,61 +50,63 @@ class CourseCard extends StatelessWidget {
               ),
               const SizedBox(width: 12),
               Expanded(
-                child: SizedBox(
-                  height: _thumbHeight,
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        course.title,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontWeight: FontWeight.w700,
-                          color: c.textPrimary,
-                          height: 1.25,
-                          fontSize: 14,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          course.title,
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontWeight: FontWeight.w700,
+                            color: c.textPrimary,
+                            height: 1.25,
+                            fontSize: 14,
+                          ),
                         ),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        _metaLine(course),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.w600,
-                          color: c.textSecondary,
+                        const SizedBox(height: 4),
+                        Text(
+                          _metaLine(course),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.w600,
+                            color: c.textSecondary,
+                          ),
                         ),
-                      ),
-                      const Spacer(),
-                      Row(
-                        children: [
-                          CourseRatingStars(course: course, starSize: 11),
-                          if (course.videoCount > 0) ...[
-                            const SizedBox(width: 8),
-                            Text(
-                              '${course.videoCount}',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w600,
-                                color: c.textSecondary,
-                              ),
-                            ),
-                          ],
-                          const Spacer(),
+                      ],
+                    ),
+                    Row(
+                      children: [
+                        CourseRatingStars(course: course, starSize: 11),
+                        if (course.videoCount > 0) ...[
+                          const SizedBox(width: 8),
                           Text(
-                            _priceLabel(course),
+                            '${course.videoCount}',
                             style: TextStyle(
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                              color: _priceColor(course),
+                              fontSize: 11,
+                              fontWeight: FontWeight.w600,
+                              color: c.textSecondary,
                             ),
                           ),
                         ],
-                      ),
-                    ],
-                  ),
+                        const Spacer(),
+                        Text(
+                          _priceLabel(course),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: _priceColor(course),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ),
             ],

@@ -2,11 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
-import '../core/theme/app_colors.dart';
 import '../core/theme/themed_colors.dart';
 import '../providers/auth_provider.dart';
 import '../providers/theme_provider.dart';
 import '../providers/video_engagement_provider.dart';
+import 'app_logo.dart';
 
 class AppDrawer extends StatelessWidget {
   const AppDrawer({super.key, required this.onSelectTab});
@@ -35,15 +35,8 @@ class AppDrawer extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    'Vidyank',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w900,
-                      color: AppColors.primary,
-                    ),
-                  ),
-                  SizedBox(height: 4),
+                  const AppLogo(height: 40),
+                  SizedBox(height: 8),
                   Text(
                     auth.isAuthenticated ? auth.user!.email : 'Sign in to continue',
                     style: TextStyle(color: c.textSecondary),

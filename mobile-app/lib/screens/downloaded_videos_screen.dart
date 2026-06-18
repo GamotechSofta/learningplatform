@@ -14,6 +14,7 @@ import '../providers/video_engagement_provider.dart';
 import '../services/course_service.dart';
 import '../services/video_engagement_service.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/page_app_bar.dart';
 
 class DownloadedVideosScreen extends StatefulWidget {
   const DownloadedVideosScreen({super.key, required this.courseService});
@@ -84,7 +85,7 @@ class _DownloadedVideosScreenState extends State<DownloadedVideosScreen> {
 
     return Scaffold(
       backgroundColor: c.background,
-      appBar: AppBar(
+      appBar: PageAppBar(
         backgroundColor: c.background,
         title: const Text('Downloaded videos'),
         actions: [

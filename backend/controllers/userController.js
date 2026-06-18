@@ -4,6 +4,7 @@ import User from "../models/user.js";
 import asyncHandler from "../middleware/asyncHandler.js";
 import { attachFallbackThumbnails } from "../utils/courseThumbnail.js";
 import { attachVideoCounts } from "../utils/courseVideoCounts.js";
+import { getPlayableCourseIdSet } from "../utils/coursePlayability.js";
 import { setAuthCookie } from "../utils/authCookie.js";
 
 const generateToken = (user) =>
@@ -145,15 +146,21 @@ export const addSubscription = asyncHandler(async (req, res) => {
 });
 
 export const getUserSubscriptions = asyncHandler(async (req, res) => {
+  if (req.user._id.toString() !== req.params.id && req.user.role !== "admin") {
+    res.status(403);
+    throw new Error("Not authorized to view these subscriptions");
+  }
+
   const user = await User.findById(req.params.id)
     .select("subscriptions")
-    .populate("subscriptions.course", "title slug thumbnail pricing");
+    .populate("subscriptions.course", "title slug thumbnail pricing isPublished description level");
 
   if (!user) {
     res.status(404);
     throw new Error("User not found");
   }
 
+  const now = new Date();
   const subscriptions = user.subscriptions.map((sub) =>
     sub.toObject ? sub.toObject() : { ...sub }
   );
@@ -164,8 +171,18 @@ export const getUserSubscriptions = asyncHandler(async (req, res) => {
   if (courses.length > 0) {
     const withThumbnails = await attachFallbackThumbnails(courses);
     const withCounts = await attachVideoCounts(withThumbnails);
+    const playableIds = await getPlayableCourseIdSet(withCounts.map((course) => course._id));
     const mediaByCourse = Object.fromEntries(
-      withCounts.map((course) => [course._id.toString(), course])
+      withCounts.map((course) => {
+        const courseId = course._id.toString();
+        return [
+          courseId,
+          {
+            ...course,
+            hasPlayableVideos: playableIds.has(courseId),
+          },
+        ];
+      })
     );
 
     for (const sub of subscriptions) {
@@ -176,8 +193,22 @@ export const getUserSubscriptions = asyncHandler(async (req, res) => {
       if (media.thumbnail) sub.course.thumbnail = media.thumbnail;
       if (media.previewVideoUrl) sub.course.previewVideoUrl = media.previewVideoUrl;
       if (media.videoCount != null) sub.course.videoCount = media.videoCount;
+      sub.course.hasPlayableVideos = media.hasPlayableVideos;
+      if (media.isPublished != null) sub.course.isPublished = media.isPublished;
+      sub.course.hasPurchased = true;
+      sub.course.hasAccess = true;
     }
   }
 
-  res.json({ success: true, data: subscriptions });
+  const data = subscriptions.filter((sub) => {
+    if (!sub.course?._id) return false;
+    if (sub.status !== "active") return false;
+    if (sub.endDate && new Date(sub.endDate) <= now) return false;
+    sub.course.hasPurchased = true;
+    sub.course.hasAccess = true;
+    return true;
+  });
+
+  res.set("Cache-Control", "no-store");
+  res.json({ success: true, data });
 });

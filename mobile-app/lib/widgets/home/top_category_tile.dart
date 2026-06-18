@@ -24,6 +24,7 @@ class TopCategoryTile extends StatelessWidget {
       onTap: onTap,
       child: SizedBox(
         width: 88,
+        height: 110,
         child: Column(
           children: [
             Container(
@@ -58,17 +59,19 @@ class TopCategoryTile extends StatelessWidget {
                     )
                   : Icon(visual.icon, color: AppColors.primary, size: 32),
             ),
-            SizedBox(height: 10),
-            Text(
-              category.name,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: c.textPrimary,
-                height: 1.2,
+            const SizedBox(height: 8),
+            Expanded(
+              child: Text(
+                category.name,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                  color: c.textPrimary,
+                  height: 1.2,
+                ),
               ),
             ),
           ],

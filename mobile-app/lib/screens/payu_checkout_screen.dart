@@ -9,6 +9,7 @@ import '../core/theme/app_colors.dart';
 import '../core/theme/themed_colors.dart';
 import '../core/utils/payu_checkout_loader.dart';
 import '../services/payment_service.dart';
+import '../widgets/page_app_bar.dart';
 
 class PayUCheckoutScreen extends StatefulWidget {
   const PayUCheckoutScreen({
@@ -255,7 +256,7 @@ class _PayUCheckoutScreenState extends State<PayUCheckoutScreen> {
     final c = context.colors;
     return Scaffold(
       backgroundColor: c.background,
-      appBar: AppBar(
+      appBar: PageAppBar(
         backgroundColor: c.background,
         title: const Text('PayU Checkout'),
       ),

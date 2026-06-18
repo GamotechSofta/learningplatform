@@ -19,7 +19,7 @@ Future<void> syncUserDataAfterAuth({
   if (user == null || user.id.isEmpty) return;
 
   await Future.wait([
-    subs.refresh(user.id).catchError((_) {}),
+    subs.refresh(user.id, forceRefresh: true).catchError((_) {}),
     progress.loadForUser(user.id).catchError((_) {}),
     saved.loadForUser(user.id).catchError((_) {}),
     notifications.loadForUser(user.id).catchError((_) {}),

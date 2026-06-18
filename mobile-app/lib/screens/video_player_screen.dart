@@ -23,6 +23,7 @@ import '../providers/video_engagement_provider.dart';
 import '../services/course_service.dart';
 import '../widgets/certificate_card.dart';
 import '../widgets/error_view.dart';
+import '../widgets/page_app_bar.dart';
 import '../widgets/purchase_dialog.dart';
 import '../widgets/thumbnail_image.dart';
 import '../widgets/video/video_action_bar.dart';
@@ -247,7 +248,10 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
           ? VideoPlayback.streamQualityLabel(playbackUrl)
           : 'Offline';
 
-      final controller = await _createPlayerController(sourceUrl);
+      final controller = await _openPlaybackController(
+        sourceUrl,
+        mp4Fallback: VideoPlayback.resolveUrl(playback.videoUrl),
+      );
 
       await VideoPlaybackSession.instance.claim(this, controller);
       controller.addListener(_onPlaybackUpdate);
@@ -341,6 +345,22 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         const ColoredBox(color: Color(0x66000000)),
       ],
     );
+  }
+
+  Future<VideoPlayerController> _openPlaybackController(
+    String sourceUrl, {
+    required String mp4Fallback,
+  }) async {
+    try {
+      return await _createPlayerController(sourceUrl);
+    } catch (primaryError) {
+      final canFallback = VideoPlayback.isHlsManifest(sourceUrl) &&
+          mp4Fallback.isNotEmpty &&
+          !VideoPlayback.isHlsManifest(mp4Fallback) &&
+          sourceUrl != mp4Fallback;
+      if (!canFallback) rethrow;
+      return _createPlayerController(mp4Fallback);
+    }
   }
 
   Future<VideoPlayerController> _createPlayerController(String url) async {
@@ -849,16 +869,14 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
 
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(
+      appBar: PageAppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
         elevation: 0,
-        leading: BackButton(
-          onPressed: () {
-            _stopPlayback();
-            context.pop();
-          },
-        ),
+        onBack: () {
+          _stopPlayback();
+          navigateBack(context);
+        },
         title: Text(
           _course?.title ?? 'Course',
           maxLines: 1,

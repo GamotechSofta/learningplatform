@@ -7,6 +7,7 @@ import '../providers/auth_provider.dart';
 import '../providers/saved_courses_provider.dart';
 import '../widgets/course_card.dart';
 import '../widgets/empty_state.dart';
+import '../widgets/page_app_bar.dart';
 
 class SavedCoursesScreen extends StatelessWidget {
   const SavedCoursesScreen({super.key});
@@ -44,18 +45,28 @@ class SavedCoursesScreen extends StatelessWidget {
             : ListView(
                 padding: const EdgeInsets.fromLTRB(20, 20, 20, 24),
                 children: [
-                  Text(
-                    'Saved Courses',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.w800,
-                      color: c.textPrimary,
-                    ),
+                  Row(
+                    children: [
+                      const TabPageBackButton(),
+                      Expanded(
+                        child: Text(
+                          'Saved Courses',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.w800,
+                            color: c.textPrimary,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   SizedBox(height: 6),
-                  Text(
-                    '${courses.length} saved',
-                    style: TextStyle(color: c.textSecondary),
+                  Padding(
+                    padding: const EdgeInsets.only(left: 48),
+                    child: Text(
+                      '${courses.length} saved',
+                      style: TextStyle(color: c.textSecondary),
+                    ),
                   ),
                   const SizedBox(height: 20),
                   ...courses.map(
