@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { pageTitles } from "../constants/navigation";
 import { useAuth } from "../context/AuthContext";
+import ThemeToggle from "./ThemeToggle";
 
 export default function Header({ onMenuClick }) {
   const { pathname } = useLocation();
@@ -8,8 +9,15 @@ export default function Header({ onMenuClick }) {
   const navigate = useNavigate();
   const title =
     pageTitles[pathname] ||
-    (pathname.includes("/edit") ? "Edit Course" :
-    pathname.includes("/curriculum") ? "Course Curriculum" : "Admin");
+    (pathname.includes("/questions/") && pathname.includes("/test")
+      ? "Online Test"
+      : pathname.includes("/questions/")
+        ? "Question Details"
+        : pathname.includes("/edit")
+          ? "Edit Course"
+          : pathname.includes("/curriculum")
+            ? "Course Curriculum"
+            : "Admin");
 
   const handleLogout = async () => {
     await logout();
@@ -17,7 +25,7 @@ export default function Header({ onMenuClick }) {
   };
 
   return (
-    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 lg:px-6">
+    <header className="sticky top-0 z-30 flex h-16 items-center justify-between border-b border-slate-200 bg-white px-4 dark:border-slate-800 dark:bg-slate-900 lg:px-6">
       <div className="flex items-center gap-3">
         <button
           type="button"
@@ -29,11 +37,12 @@ export default function Header({ onMenuClick }) {
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
           </svg>
         </button>
-        <h1 className="text-lg font-semibold text-slate-800">{title}</h1>
+        <h1 className="text-lg font-semibold text-slate-800 dark:text-slate-100">{title}</h1>
       </div>
 
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2 rounded-lg border border-slate-200 py-1 pl-1 pr-3">
+        <ThemeToggle />
+        <div className="flex items-center gap-2 rounded-lg border border-slate-200 py-1 pl-1 pr-3 dark:border-slate-700">
           <div className="flex h-8 w-8 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
             {user?.name?.charAt(0)?.toUpperCase() || "A"}
           </div>

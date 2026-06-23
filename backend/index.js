@@ -14,7 +14,12 @@ import lessonRoutes from "./routes/lessonRoutes.js";
 import videoRoutes from "./routes/videoRoutes.js";
 import uploadRoutes from "./routes/uploadRoutes.js";
 import paymentRoutes from "./routes/paymentRoutes.js";
+<<<<<<< Updated upstream
 import catalogRoutes from "./routes/catalogRoutes.js";
+=======
+import questionRoutes from "./routes/questionRoutes.js";
+import testRoutes from "./routes/testRoutes.js";
+>>>>>>> Stashed changes
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -42,7 +47,12 @@ app.use("/api/lessons", lessonRoutes);
 app.use("/api/videos", videoRoutes);
 app.use("/api/upload", uploadRoutes);
 app.use("/api/payments", paymentRoutes);
+<<<<<<< Updated upstream
 app.use("/api/catalog", catalogRoutes);
+=======
+app.use("/api/questions", questionRoutes);
+app.use("/api/tests", testRoutes);
+>>>>>>> Stashed changes
 
 app.use(errorHandler);
 

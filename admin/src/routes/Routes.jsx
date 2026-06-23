@@ -30,6 +30,10 @@ import Announcements from "../pages/Announcements";
 import SiteSettings from "../pages/SiteSettings";
 import SupportTickets from "../pages/SupportTickets";
 import ActivityLogs from "../pages/ActivityLogs";
+import TestManagementHub from "../pages/questions/TestManagementHub";
+import QuestionDetail from "../pages/questions/QuestionDetail";
+import OnlineTest from "../pages/questions/OnlineTest";
+import TestResult from "../pages/questions/TestResult";
 
 const router = createBrowserRouter(
   createRoutesFromElements(
@@ -61,6 +65,11 @@ const router = createBrowserRouter(
           <Route path="site-settings" element={<SiteSettings />} />
           <Route path="support" element={<SupportTickets />} />
           <Route path="activity-logs" element={<ActivityLogs />} />
+          <Route path="questions" element={<TestManagementHub />} />
+          <Route path="questions/list" element={<Navigate to="/questions?tab=questions" replace />} />
+          <Route path="questions/test" element={<OnlineTest />} />
+          <Route path="questions/test/result" element={<TestResult />} />
+          <Route path="questions/:id" element={<QuestionDetail />} />
         </Route>
       </Route>
     </>

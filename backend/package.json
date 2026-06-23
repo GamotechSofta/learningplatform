@@ -26,7 +26,8 @@
     "audit:videos": "node scripts/auditVideoIntegrity.js",
     "audit:videos:apply": "node scripts/auditVideoIntegrity.js --apply",
     "transcode:videos": "node scripts/transcodeVideos.js --all",
-    "fix:paid-lessons": "node scripts/fixPaidLessonFlags.js"
+    "fix:paid-lessons": "node scripts/fixPaidLessonFlags.js",
+    "import:jee-questions": "node scripts/importJeeQuestions.js"
   },
   "dependencies": {
     "@aws-sdk/client-s3": "^3.1065.0",
@@ -40,7 +41,8 @@
     "express": "^5.2.1",
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.7.0",
-    "multer": "^2.1.1"
+    "multer": "^2.1.1",
+    "csv-parse": "^5.6.0"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
