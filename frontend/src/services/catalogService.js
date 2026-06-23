@@ -1,5 +1,5 @@
 import { getList, getJson } from '../lib/apiClient'
-import { normalizeCategory, normalizeCourse } from '../utils/course'
+import { normalizeCategory, normalizeCourse, normalizeCourseFull } from '../utils/course'
 
 let coursesCache = null
 let coursesPromise = null
@@ -68,7 +68,7 @@ export async function fetchCourseById(id) {
 
 export async function fetchCourseFull(id) {
   const json = await getJson(`/api/courses/${id}/full`, { published: 'true' })
-  return normalizeCourse(json.data)
+  return normalizeCourseFull(json.data)
 }
 
 export function invalidateCatalogCache() {

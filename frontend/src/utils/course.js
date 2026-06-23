@@ -11,6 +11,8 @@ const PLACEHOLDER_THUMBNAIL =
 
 export { PLACEHOLDER_THUMBNAIL }
 
+export const LOCKED_VIDEO_THUMBNAIL = '/blureBanner.png'
+
 export function getDisplayPrice(pricing = {}) {
   const { lifetime = 0, yearly = 0, monthly = 0, currency = 'INR' } = pricing
 
@@ -31,6 +33,112 @@ export function formatPrice(amount, currency = 'INR') {
   if (amount <= 0) return 'Free'
   if (currency === 'INR') return `₹${Math.round(amount).toLocaleString('en-IN')}`
   return `${currency} ${Math.round(amount).toLocaleString()}`
+}
+
+export function formatDuration(seconds) {
+  const total = Number(seconds) || 0
+  if (total <= 0) return '—'
+  const hours = Math.floor(total / 3600)
+  const minutes = Math.floor((total % 3600) / 60)
+  const secs = Math.floor(total % 60)
+  if (hours > 0) {
+    return `${hours}:${String(minutes).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
+  }
+  return `${minutes}:${String(secs).padStart(2, '0')}`
+}
+
+function normalizeLessonVideo(video) {
+  return {
+    id: video._id?.toString() ?? '',
+    title: video.title ?? 'Untitled video',
+    duration: video.duration ?? 0,
+    thumbnail: video.thumbnail || null,
+    isLocked: video.isLocked === true,
+    order: video.order ?? 0,
+  }
+}
+
+function applyWebPlaybackLocks(course, raw) {
+  const hasFullAccess =
+    !course.isPaid || raw.hasAccess === true || raw.hasPurchased === true
+
+  if (hasFullAccess) {
+    return course
+  }
+
+  const lockVideo = (video, locked) => ({
+    ...video,
+    isLocked: locked,
+    thumbnail: locked ? null : video.thumbnail,
+  })
+
+  if (course.videos.some((video) => video.isLocked)) {
+    return {
+      ...course,
+      videos: course.videos.map((video) => lockVideo(video, video.isLocked)),
+      lessons: course.lessons.map((lesson) => ({
+        ...lesson,
+        videos: lesson.videos.map((video) => lockVideo(video, video.isLocked)),
+      })),
+    }
+  }
+
+  let previewGranted = false
+  const videos = course.videos.map((video) => {
+    if (!previewGranted) {
+      previewGranted = true
+      return lockVideo(video, false)
+    }
+    return lockVideo(video, true)
+  })
+
+  let lessonPreviewGranted = false
+  const lessons = course.lessons.map((lesson) => ({
+    ...lesson,
+    videos: lesson.videos.map((video) => {
+      if (!lessonPreviewGranted) {
+        lessonPreviewGranted = true
+        return lockVideo(video, false)
+      }
+      return lockVideo(video, true)
+    }),
+  }))
+
+  return { ...course, videos, lessons }
+}
+
+export function normalizeCourseFull(raw) {
+  const base = normalizeCourse(raw)
+  const lessons = (raw.lessons || []).map((lesson) => {
+    const lessonId = lesson._id?.toString() ?? ''
+    const videos = (lesson.videos || []).map(normalizeLessonVideo).sort((a, b) => a.order - b.order)
+
+    return {
+      id: lessonId,
+      title: lesson.title ?? 'Lesson',
+      order: lesson.order ?? 0,
+      videos,
+    }
+  })
+
+  const videos = lessons
+    .flatMap((lesson) =>
+      lesson.videos.map((video) => ({
+        ...video,
+        lessonTitle: lesson.title,
+      })),
+    )
+    .sort((a, b) => a.order - b.order)
+
+  return applyWebPlaybackLocks(
+    {
+      ...base,
+      lessons,
+      videos,
+      videoCount: videos.length || base.videoCount,
+    },
+    raw,
+  )
 }
 
 export function normalizeCourse(raw) {
