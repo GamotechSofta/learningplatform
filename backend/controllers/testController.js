@@ -81,11 +81,19 @@ export const updateTest = asyncHandler(async (req, res) => {
     throw new Error("Test not found");
   }
 
-  const payload = await buildTestPayload({
-    ...existing.toObject(),
-    ...req.body,
-    course: req.body.course || req.body.courseId || existing.course,
-  });
+  const payload = await buildTestPayload(
+    {
+      ...existing.toObject(),
+      ...req.body,
+      course: req.body.course || req.body.courseId || existing.course,
+      _existingCourse: existing.course,
+      _existingQuestionCount: existing.questionCount,
+    },
+    {
+      excludeTestId: existing._id,
+      keepExistingQuestions: true,
+    }
+  );
 
   const test = await Test.findByIdAndUpdate(req.params.id, payload, {
     new: true,
