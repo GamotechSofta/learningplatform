@@ -1,5 +1,6 @@
 import axios from "axios";
 import { parse } from "csv-parse/sync";
+import Course from "../models/course.js";
 import Question from "../models/question.js";
 import QuestionVersion from "../models/questionVersion.js";
 import {
@@ -31,6 +32,30 @@ export const parseCsvContent = (csvText) =>
   });
 
 const activeFilter = { isDeleted: { $ne: true } };
+
+const courseResolveCache = new Map();
+
+export const resolveCourseId = async (courseName, fallbackId) => {
+  const name = String(courseName || "").trim();
+  if (!name) return fallbackId || null;
+
+  const cacheKey = name.toLowerCase();
+  if (courseResolveCache.has(cacheKey)) {
+    return courseResolveCache.get(cacheKey);
+  }
+
+  const escaped = name.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const course = await Course.findOne({
+    title: new RegExp(`^${escaped}$`, "i"),
+  });
+
+  if (!course) {
+    throw new Error(`Course not found: ${name}`);
+  }
+
+  courseResolveCache.set(cacheKey, course._id);
+  return course._id;
+};
 
 const duplicateKey = (item, courseId) => {
   const text = typeof item === "string" ? item : item?.question || "";
@@ -171,10 +196,6 @@ export const importQuestionsFromCsv = async ({
   skipDuplicates = true,
   courseId,
 } = {}) => {
-  if (!courseId) {
-    throw new Error("courseId is required for import");
-  }
-
   const content = csvText || (await downloadCsv(url));
   const preview = await previewCsvImport(content, courseId);
   const rows = preview.validRows.length
@@ -183,7 +204,7 @@ export const importQuestionsFromCsv = async ({
         row.Question || row.Option1 ? mapStandardCsvRow(row, i) : mapCsvRowToQuestion(row)
       );
 
-  if (clearExisting) {
+  if (clearExisting && courseId) {
     await Question.updateMany(
       { course: courseId },
       { isDeleted: true, deletedAt: new Date() }
@@ -210,12 +231,14 @@ export const importQuestionsFromCsv = async ({
         continue;
       }
 
-      const key = duplicateKey(payload, courseId);
+      const resolvedCourseId = await resolveCourseId(payload.courseName, courseId);
+
+      const key = duplicateKey(payload, resolvedCourseId);
 
       const filter = payload.uuid
-        ? { uuid: payload.uuid, course: courseId }
+        ? { uuid: payload.uuid }
         : {
-            course: courseId,
+            ...(resolvedCourseId ? { course: resolvedCourseId } : {}),
             question: payload.question,
             subject: payload.subject,
             chapter: payload.chapter || "",
@@ -225,7 +248,7 @@ export const importQuestionsFromCsv = async ({
       const existing = await Question.findOne(filter);
 
       if (existing && skipDuplicates && !payload.uuid) {
-        const existingKey = duplicateKey(existing, courseId);
+        const existingKey = duplicateKey(existing, resolvedCourseId);
         if (existingKey === key) {
           stats.skipped += 1;
           continue;
@@ -233,7 +256,7 @@ export const importQuestionsFromCsv = async ({
       }
 
       const data = {
-        course: courseId,
+        ...(resolvedCourseId ? { course: resolvedCourseId } : {}),
         question: payload.question,
         options: payload.options,
         correctAnswer: payload.correctAnswer,

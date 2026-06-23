@@ -110,11 +110,10 @@ questionSchema.index({ course: 1, subject: 1, chapter: 1 });
 questionSchema.index({ subject: 1, questionNumber: 1 });
 questionSchema.index({ question: "text", subject: "text", chapter: "text" });
 
-questionSchema.pre("save", function normalizeFields(next) {
+questionSchema.pre("save", function normalizeFields() {
   if (this.correctAnswer != null) {
     this.correctAnswer = Number(this.correctAnswer);
   }
-  next();
 });
 
 questionSchema.set("toJSON", {

@@ -6,6 +6,7 @@ import QuestionPalette from "../../components/test/QuestionPalette";
 import TestTimer from "../../components/test/TestTimer";
 import { getQuestions } from "../../services/questionService";
 import { submitTest } from "../../services/testService";
+import { prepareTestQuestion } from "../../utils/mathDisplay";
 
 const TEST_DURATION_SECONDS = 45 * 60;
 
@@ -24,6 +25,13 @@ export default function OnlineTest() {
   const [started, setStarted] = useState(false);
 
   const currentQuestion = questions[currentIndex];
+
+  const displayQuestion = useMemo(() => {
+    if (!currentQuestion) {
+      return { questionText: "", options: [], mathBlock: "" };
+    }
+    return prepareTestQuestion(currentQuestion.question, currentQuestion.options);
+  }, [currentQuestion]);
 
   const handleSubmit = useCallback(
     async (autoSubmitted = false) => {
@@ -184,11 +192,17 @@ export default function OnlineTest() {
           </div>
 
           <MathText className="text-base leading-8">
-            {currentQuestion.question}
+            {displayQuestion.questionText}
           </MathText>
 
+          {displayQuestion.mathBlock ? (
+            <MathText className="my-4 text-base leading-8">
+              {`\\[${displayQuestion.mathBlock}\\]`}
+            </MathText>
+          ) : null}
+
           <div className="mt-6 space-y-3">
-            {currentQuestion.options?.map((option, index) => {
+            {displayQuestion.options?.map((option, index) => {
               const value = String(index + 1);
               const selected = answers[currentQuestion._id]?.selectedAnswer === value;
               return (

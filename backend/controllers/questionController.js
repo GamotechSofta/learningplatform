@@ -86,21 +86,11 @@ export const previewImport = asyncHandler(async (req, res) => {
     throw new Error("csvText is required");
   }
 
-  if (!req.body?.courseId) {
-    res.status(400);
-    throw new Error("courseId is required");
-  }
-
-  const preview = await previewCsvImport(req.body.csvText, req.body.courseId);
+  const preview = await previewCsvImport(req.body.csvText, req.body.courseId || null);
   res.json({ success: true, data: preview });
 });
 
 export const createQuestion = asyncHandler(async (req, res) => {
-  if (!req.body?.course && !req.body?.courseId) {
-    res.status(400);
-    throw new Error("course is required");
-  }
-
   const payload = normalizeQuestionPayload(req.body);
   const question = await Question.create({
     ...payload,
@@ -262,17 +252,12 @@ export const deleteAllQuestions = asyncHandler(async (req, res) => {
 });
 
 export const importQuestions = asyncHandler(async (req, res) => {
-  if (!req.body?.courseId) {
-    res.status(400);
-    throw new Error("courseId is required");
-  }
-
   const stats = await importQuestionsFromCsv({
     url: req.body?.url,
     csvText: req.body?.csvText,
     clearExisting: Boolean(req.body?.clearExisting),
     skipDuplicates: req.body?.skipDuplicates !== false,
-    courseId: req.body.courseId,
+    courseId: req.body?.courseId || null,
   });
 
   res.status(201).json({

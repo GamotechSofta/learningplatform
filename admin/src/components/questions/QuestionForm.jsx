@@ -1,12 +1,18 @@
 import ImageUpload from "../ImageUpload";
 import RichTextEditor from "./RichTextEditor";
+import {
+  QUESTION_SUBJECTS,
+  DIFFICULTY_OPTIONS,
+  getChaptersForSubject,
+} from "../../constants/questionOptions";
 
 const emptyForm = {
   questionNumber: "",
   subject: "Mathematics",
   shift: "",
   year: "",
-  chapter: "",
+  chapter: "Algebra",
+  course: "",
   question: "",
   options: ["", "", "", ""],
   correctAnswer: "1",
@@ -18,7 +24,16 @@ const emptyForm = {
   status: "active",
 };
 
-export default function QuestionForm({ form, onChange, onSubmit, onCancel, submitLabel }) {
+export default function QuestionForm({
+  form,
+  onChange,
+  onSubmit,
+  onCancel,
+  submitLabel,
+  courses = [],
+}) {
+  const chapters = getChaptersForSubject(form.subject);
+
   const updateOption = (index, value) => {
     const options = [...form.options];
     options[index] = value;
@@ -34,11 +49,36 @@ export default function QuestionForm({ form, onChange, onSubmit, onCancel, submi
     });
   };
 
+  const handleSubjectChange = (subject) => {
+    const nextChapters = getChaptersForSubject(subject);
+    onChange({
+      subject,
+      chapter: nextChapters[0] || "",
+    });
+  };
+
   const useRichText = form.questionType === "rich" || form.questionType === "latex";
 
   return (
     <form onSubmit={onSubmit} className="space-y-4">
       <div className="grid gap-4 md:grid-cols-2">
+        {courses.length > 0 && (
+          <label className="text-sm text-slate-600 dark:text-slate-300 md:col-span-2">
+            Course (optional)
+            <select
+              value={form.course || ""}
+              onChange={(e) => onChange({ course: e.target.value })}
+              className="mt-1 w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+            >
+              <option value="">— No course —</option>
+              {courses.map((course) => (
+                <option key={course._id} value={course._id}>
+                  {course.title}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
         <input
           type="number"
           placeholder="Question number (optional)"
@@ -46,41 +86,49 @@ export default function QuestionForm({ form, onChange, onSubmit, onCancel, submi
           onChange={(e) => onChange({ questionNumber: e.target.value })}
           className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
         />
-        <input
+        <select
           required
-          placeholder="Subject"
           value={form.subject}
-          onChange={(e) => onChange({ subject: e.target.value })}
+          onChange={(e) => handleSubjectChange(e.target.value)}
           className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-        />
-        <input
-          placeholder="Chapter"
-          value={form.chapter || ""}
+        >
+          {QUESTION_SUBJECTS.map((subject) => (
+            <option key={subject} value={subject}>
+              {subject}
+            </option>
+          ))}
+        </select>
+        <select
+          required
+          value={form.chapter || chapters[0] || ""}
           onChange={(e) => onChange({ chapter: e.target.value })}
           className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-        />
-        <input
-          type="number"
-          placeholder="Year"
-          value={form.year || ""}
-          onChange={(e) => onChange({ year: e.target.value })}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-        />
-        <input
-          placeholder="Shift (optional)"
-          value={form.shift}
-          onChange={(e) => onChange({ shift: e.target.value })}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
-        />
+        >
+          {chapters.map((chapter) => (
+            <option key={chapter} value={chapter}>
+              {chapter}
+            </option>
+          ))}
+        </select>
         <select
+          required
           value={form.difficulty}
           onChange={(e) => onChange({ difficulty: e.target.value })}
           className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
         >
-          <option value="easy">Easy</option>
-          <option value="medium">Medium</option>
-          <option value="hard">Hard</option>
+          {DIFFICULTY_OPTIONS.map((item) => (
+            <option key={item.value} value={item.value}>
+              {item.label}
+            </option>
+          ))}
         </select>
+        <input
+          type="number"
+          placeholder="Year (optional)"
+          value={form.year || ""}
+          onChange={(e) => onChange({ year: e.target.value })}
+          className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"
+        />
         <select
           value={form.questionType || "rich"}
           onChange={(e) => onChange({ questionType: e.target.value })}
@@ -102,12 +150,6 @@ export default function QuestionForm({ form, onChange, onSubmit, onCancel, submi
             </option>
           ))}
         </select>
-        <input
-          placeholder="Tags (comma separated)"
-          value={(form.tags || []).join(", ")}
-          onChange={(e) => updateTags(e.target.value)}
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100 md:col-span-2"
-        />
       </div>
 
       {(form.questionType === "image" || form.image) && (
@@ -155,7 +197,7 @@ export default function QuestionForm({ form, onChange, onSubmit, onCancel, submi
 
       <textarea
         rows={3}
-        placeholder="Explanation / Solution"
+        placeholder="Explanation / Solution (optional)"
         value={form.explanation}
         onChange={(e) => onChange({ explanation: e.target.value })}
         className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm dark:border-slate-600 dark:bg-slate-800 dark:text-slate-100"

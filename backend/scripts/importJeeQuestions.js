@@ -1,9 +1,11 @@
-import path from "path";
 import dotenv from "dotenv";
 import mongoose from "mongoose";
+import Course from "../models/course.js";
 import { importQuestionsFromCsv } from "../services/questionService.js";
 
 dotenv.config();
+
+const COURSE_TITLE = process.env.IMPORT_COURSE_TITLE || "Mathematics";
 
 const run = async () => {
   if (!process.env.MONGODB_URI) {
@@ -12,8 +14,16 @@ const run = async () => {
 
   await mongoose.connect(process.env.MONGODB_URI);
 
-  console.log("Downloading and importing JEE Mains Mathematics questions...");
-  const stats = await importQuestionsFromCsv({ clearExisting: false });
+  const course =
+    (await Course.findOne({ title: new RegExp(`^${COURSE_TITLE}$`, "i") })) ||
+    (await Course.findOne({ slug: COURSE_TITLE.toLowerCase().replace(/\s+/g, "-") }));
+
+  if (!course) {
+    throw new Error(`Course not found: ${COURSE_TITLE}`);
+  }
+
+  console.log(`Downloading and importing JEE Mains questions into "${course.title}" (${course._id})...`);
+  const stats = await importQuestionsFromCsv({ clearExisting: false, courseId: course._id });
 
   console.log("Import complete:");
   console.log(`  Total rows: ${stats.totalRows}`);

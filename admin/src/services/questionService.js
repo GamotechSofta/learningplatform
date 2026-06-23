@@ -29,8 +29,11 @@ export const getDuplicateQuestions = async (courseId) => {
   return data.data;
 };
 
-export const previewCsvImport = async (csvText, courseId) => {
-  const { data } = await api.post("/api/questions/import/preview", { csvText, courseId });
+export const previewCsvImport = async (csvText, courseId = null) => {
+  const { data } = await api.post("/api/questions/import/preview", {
+    csvText,
+    ...(courseId ? { courseId } : {}),
+  });
   return data.data;
 };
 

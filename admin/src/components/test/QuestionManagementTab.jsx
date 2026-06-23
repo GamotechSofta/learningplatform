@@ -111,10 +111,6 @@ export default function QuestionManagementTab({ onMessage, onError }) {
   }, [selectedCourseId]);
 
   const openForm = (question = null) => {
-    if (!question && !selectedCourseId) {
-      onError("Please select a course first");
-      return;
-    }
     if (question) {
       setEditing(question._id);
       setForm({
@@ -123,6 +119,7 @@ export default function QuestionManagementTab({ onMessage, onError }) {
         shift: question.shift || "",
         year: String(question.year || ""),
         chapter: question.chapter || "",
+        course: question.course?._id || question.course || selectedCourseId || "",
         question: question.question || "",
         options: question.options?.length ? question.options : ["", "", "", ""],
         correctAnswer: String(question.correctAnswer || "1"),
@@ -135,7 +132,10 @@ export default function QuestionManagementTab({ onMessage, onError }) {
       });
     } else {
       setEditing(null);
-      setForm(emptyForm);
+      setForm({
+        ...emptyForm,
+        course: selectedCourseId || "",
+      });
     }
     setShowForm(true);
     setSection("list");
@@ -143,10 +143,6 @@ export default function QuestionManagementTab({ onMessage, onError }) {
 
   const handleSave = async (e) => {
     e.preventDefault();
-    if (!editing && !selectedCourseId) {
-      onError("Please select a course first");
-      return;
-    }
 
     const payload = {
       ...form,
@@ -155,7 +151,7 @@ export default function QuestionManagementTab({ onMessage, onError }) {
       options: form.options.filter(Boolean),
       correctAnswer: Number(form.correctAnswer),
       image: form.image || form.imageUrl || "",
-      course: selectedCourseId,
+      course: form.course || selectedCourseId || undefined,
     };
 
     try {
@@ -281,6 +277,7 @@ export default function QuestionManagementTab({ onMessage, onError }) {
         loading={coursesLoading}
         selectedCourseId={selectedCourseId}
         onChange={setSelectedCourseId}
+        hint="Course निवडा (list filter). CSV मध्ये Course column किंवा form मध्ये course optional."
       />
 
       <div className="flex flex-wrap gap-2">
@@ -289,7 +286,11 @@ export default function QuestionManagementTab({ onMessage, onError }) {
             key={item.id}
             type="button"
             onClick={() => {
-              if (item.id === "import" && !requireCourse()) return;
+              if (item.id === "import") {
+                setSection(item.id);
+                return;
+              }
+              if (!requireCourse()) return;
               setSection(item.id);
               if (item.id === "list") loadQuestions(1);
             }}
@@ -304,9 +305,9 @@ export default function QuestionManagementTab({ onMessage, onError }) {
         ))}
       </div>
 
-      {section === "import" && selectedCourseId && (
+      {section === "import" && (
         <CsvImportPanel
-          courseId={selectedCourseId}
+          courseId={selectedCourseId || null}
           courseName={selectedCourse?.title}
           onComplete={() => {
             onMessage("CSV import completed");
@@ -317,14 +318,38 @@ export default function QuestionManagementTab({ onMessage, onError }) {
         />
       )}
 
-      {section === "import" && !selectedCourseId && (
-        <p className="text-sm text-slate-500">Course निवडल्यानंतर CSV upload करता येईल.</p>
+      {section === "list" && !selectedCourseId && (
+        <div className="space-y-3">
+          <p className="rounded-lg border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+            प्रश्न list पाहण्यासाठी Course निवडा. Add Question / CSV import course optional.
+          </p>
+          <button
+            type="button"
+            onClick={() => openForm()}
+            className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white"
+          >
+            Add Question
+          </button>
+        </div>
       )}
 
-      {section === "list" && !selectedCourseId && (
-        <p className="rounded-lg border border-dashed border-slate-300 p-8 text-center text-sm text-slate-500">
-          प्रश्न पाहण्यासाठी वर Course निवडा.
-        </p>
+      {section === "list" && showForm && !selectedCourseId && (
+        <div className="rounded-xl border border-slate-200 bg-white p-5 dark:border-slate-700 dark:bg-slate-900">
+          <h2 className="mb-4 text-lg font-semibold">
+            {editing ? "Edit Question" : "Add Question"}
+          </h2>
+          <QuestionForm
+            form={form}
+            courses={courses}
+            onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
+            onSubmit={handleSave}
+            onCancel={() => {
+              setShowForm(false);
+              setEditing(null);
+            }}
+            submitLabel={editing ? "Update Question" : "Create Question"}
+          />
+        </div>
       )}
 
       {section === "list" && selectedCourseId && (
@@ -390,6 +415,7 @@ export default function QuestionManagementTab({ onMessage, onError }) {
               </p>
               <QuestionForm
                 form={form}
+                courses={courses}
                 onChange={(patch) => setForm((prev) => ({ ...prev, ...patch }))}
                 onSubmit={handleSave}
                 onCancel={() => {

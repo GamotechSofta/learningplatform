@@ -22,10 +22,6 @@ export default function CsvImportPanel({ courseId, courseName, onComplete, onErr
   };
 
   const handlePreview = async () => {
-    if (!courseId) {
-      onError("Please select a course first");
-      return;
-    }
     if (!csvText) {
       onError("Upload a CSV file first");
       return;
@@ -33,7 +29,7 @@ export default function CsvImportPanel({ courseId, courseName, onComplete, onErr
 
     try {
       setPreviewing(true);
-      const data = await previewCsvImport(csvText, courseId);
+      const data = await previewCsvImport(csvText, courseId || null);
       setPreview(data);
     } catch (err) {
       onError(err.response?.data?.message || "Preview failed");
@@ -43,10 +39,6 @@ export default function CsvImportPanel({ courseId, courseName, onComplete, onErr
   };
 
   const handleImport = async () => {
-    if (!courseId) {
-      onError("Please select a course first");
-      return;
-    }
     if (!csvText) {
       onError("Upload a CSV file first");
       return;
@@ -59,7 +51,11 @@ export default function CsvImportPanel({ courseId, courseName, onComplete, onErr
         setProgress((p) => (p < 90 ? p + 8 : p));
       }, 300);
 
-      const result = await importQuestions({ csvText, courseId, skipDuplicates: true });
+      const result = await importQuestions({
+        csvText,
+        ...(courseId ? { courseId } : {}),
+        skipDuplicates: true,
+      });
       clearInterval(timer);
       setProgress(100);
       setReport(result.data);
@@ -76,11 +72,17 @@ export default function CsvImportPanel({ courseId, courseName, onComplete, onErr
       <div>
         <h3 className="text-lg font-semibold text-slate-900 dark:text-white">Bulk CSV Upload</h3>
         <p className="mt-1 text-sm text-slate-500">
-          Format: Question, Option1, Option2, Option3, Option4, CorrectAnswer, Subject, Chapter,
-          Difficulty, Explanation
+          <strong>Required:</strong> Question, Option1–4, CorrectAnswer, Explanation
+          <br />
+          <strong>Optional:</strong> Subject, Chapter, Difficulty, Course
           {courseName && (
             <span className="mt-1 block font-medium text-blue-700 dark:text-blue-300">
-              Importing to course: {courseName}
+              Default course: {courseName} (override with Course column in CSV)
+            </span>
+          )}
+          {!courseName && (
+            <span className="mt-1 block text-amber-700 dark:text-amber-300">
+              Course not selected — add Course column in CSV or select course above
             </span>
           )}
         </p>
@@ -90,8 +92,7 @@ export default function CsvImportPanel({ courseId, courseName, onComplete, onErr
         <button
           type="button"
           onClick={() => fileRef.current?.click()}
-          disabled={!courseId}
-          className="rounded-lg border border-slate-300 px-4 py-2 text-sm dark:border-slate-600 dark:text-slate-200 disabled:opacity-50"
+          className="rounded-lg border border-slate-300 px-4 py-2 text-sm dark:border-slate-600 dark:text-slate-200"
         >
           Upload CSV File
         </button>
@@ -100,7 +101,7 @@ export default function CsvImportPanel({ courseId, courseName, onComplete, onErr
         <button
           type="button"
           onClick={handlePreview}
-          disabled={!courseId || !csvText || previewing}
+          disabled={!csvText || previewing}
           className="rounded-lg bg-slate-700 px-4 py-2 text-sm text-white disabled:opacity-60"
         >
           {previewing ? "Validating..." : "Preview & Validate"}
@@ -108,7 +109,7 @@ export default function CsvImportPanel({ courseId, courseName, onComplete, onErr
         <button
           type="button"
           onClick={handleImport}
-          disabled={!courseId || !csvText || importing}
+          disabled={!csvText || importing}
           className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-60"
         >
           {importing ? "Importing..." : "Import All Questions"}
@@ -162,6 +163,7 @@ export default function CsvImportPanel({ courseId, courseName, onComplete, onErr
                       <th className="px-3 py-2">Question</th>
                       <th className="px-3 py-2">Subject</th>
                       <th className="px-3 py-2">Chapter</th>
+                      <th className="px-3 py-2">Course</th>
                       <th className="px-3 py-2">Answer</th>
                     </tr>
                   </thead>
@@ -172,6 +174,7 @@ export default function CsvImportPanel({ courseId, courseName, onComplete, onErr
                         <td className="max-w-xs truncate px-3 py-2">{row.question}</td>
                         <td className="px-3 py-2">{row.subject}</td>
                         <td className="px-3 py-2">{row.chapter}</td>
+                        <td className="px-3 py-2">{row.courseName || "—"}</td>
                         <td className="px-3 py-2">{row.correctAnswer}</td>
                       </tr>
                     ))}

@@ -1,3 +1,9 @@
+import {
+  normalizeSubjectOption,
+  normalizeChapterOption,
+  DIFFICULTY_OPTIONS,
+} from "../constants/questionOptions.js";
+
 const OPTION_BLOCK_REGEX = /\(\s*(\d+)\s*\)\s*([\s\S]*?)(?=\n\s*\(\s*\d+\s*\)|$)/g;
 
 export const REQUIRED_CSV_COLUMNS = [
@@ -7,10 +13,18 @@ export const REQUIRED_CSV_COLUMNS = [
   "Option3",
   "Option4",
   "CorrectAnswer",
+  "Explanation",
+];
+
+export const OPTIONAL_CSV_COLUMNS = [
   "Subject",
   "Chapter",
   "Difficulty",
-  "Explanation",
+  "Course",
+  "Year",
+  "Tags",
+  "Shift",
+  "Image",
 ];
 
 export const normalizeQuestionText = (text = "") =>
@@ -18,6 +32,27 @@ export const normalizeQuestionText = (text = "") =>
 
 export const parseQuestionText = (rawText = "") => {
   const text = String(rawText).replace(/\r\n/g, "\n").trim();
+
+  const alignMatch = text.match(
+    /(\\\[\s*)?\\begin\{align\*?\}([\s\S]+?)\\end\{align\*?\}(\s*\\\])?/i
+  );
+
+  if (alignMatch) {
+    const options = [];
+    for (const line of alignMatch[2].split("\n")) {
+      const row = line.match(/\(\s*(\d+)\s*\)\s*&\s*(.+?)(?:\\\\)?\s*$/);
+      if (row) {
+        options[Number(row[1]) - 1] = row[2].trim();
+      }
+    }
+
+    const parsed = options.filter(Boolean);
+    if (parsed.length >= 2) {
+      const question = text.replace(alignMatch[0], "").replace(/\\\[\s*$/, "").trim();
+      return { question, options: parsed };
+    }
+  }
+
   const firstOptionIndex = text.search(/\(\s*1\s*\)/);
 
   if (firstOptionIndex === -1) {
@@ -51,7 +86,7 @@ export const normalizeCorrectAnswer = (value) => {
 
 export const normalizeDifficulty = (value) => {
   const cleaned = String(value || "medium").trim().toLowerCase();
-  if (["easy", "medium", "hard"].includes(cleaned)) return cleaned;
+  if (DIFFICULTY_OPTIONS.includes(cleaned)) return cleaned;
   return "medium";
 };
 
@@ -83,8 +118,8 @@ export const mapStandardCsvRow = (row, rowIndex = 0) => {
     row.CorrectAnswer || row.correctAnswer || row["Correct Answer"]
   );
 
-  const subject = (row.Subject || row.subject || "").trim();
-  const chapter = (row.Chapter || row.chapter || "").trim();
+  const subject = normalizeSubjectOption(row.Subject || row.subject);
+  const chapter = normalizeChapterOption(subject, row.Chapter || row.chapter);
   const difficulty = normalizeDifficulty(row.Difficulty || row.difficulty);
   const explanation = (row.Explanation || row.explanation || "").trim();
   const year = inferYear(row.Shift || row.shift, row.Year || row.year);
@@ -92,6 +127,7 @@ export const mapStandardCsvRow = (row, rowIndex = 0) => {
     .split(",")
     .map((tag) => tag.trim())
     .filter(Boolean);
+  const courseName = (row.Course || row.course || "").trim();
 
   return {
     rowIndex: rowIndex + 1,
@@ -104,6 +140,7 @@ export const mapStandardCsvRow = (row, rowIndex = 0) => {
     explanation,
     year,
     tags,
+    courseName,
     shift: (row.Shift || row.shift || "").trim(),
     image: (row.Image || row.image || "").trim(),
     status: "active",
@@ -115,7 +152,6 @@ export const validateCsvRow = (payload) => {
 
   if (!payload.question) errors.push("Question is required");
   if (payload.options.length < 2) errors.push("At least 2 options required");
-  if (!payload.subject) errors.push("Subject is required");
   if (!payload.correctAnswer || payload.correctAnswer < 1) {
     errors.push("Valid CorrectAnswer is required");
   }
@@ -138,11 +174,12 @@ export const validateCsvColumns = (rows) => {
   return {
     valid: missing.length === 0,
     missing,
+    optional: OPTIONAL_CSV_COLUMNS,
     headers,
     message:
       missing.length === 0
-        ? "All required columns present"
-        : `Missing columns: ${missing.join(", ")}`,
+        ? "Required columns present (Subject, Chapter, Difficulty, Course are optional)"
+        : `Missing required columns: ${missing.join(", ")}`,
   };
 };
 
@@ -198,10 +235,10 @@ export const normalizeQuestionPayload = (body = {}) => {
   return {
     uuid: body.uuid,
     questionNumber: body.questionNumber ? Number(body.questionNumber) : undefined,
-    subject: body.subject?.trim(),
+    subject: normalizeSubjectOption(body.subject),
     shift: body.shift?.trim() || "",
     year: body.year ? Number(body.year) : inferYear(body.shift, body.year),
-    chapter: body.chapter?.trim() || "",
+    chapter: normalizeChapterOption(body.subject, body.chapter),
     question: body.question?.trim(),
     options,
     correctAnswer: normalizeCorrectAnswer(body.correctAnswer),
