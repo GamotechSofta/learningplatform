@@ -29,6 +29,11 @@ const testSchema = new mongoose.Schema(
         ref: "Question",
       },
     ],
+    questionCount: {
+      type: Number,
+      min: 1,
+      default: 10,
+    },
     durationMinutes: {
       type: Number,
       default: 180,
@@ -82,6 +87,11 @@ const testSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
     },
+    course: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+      index: true,
+    },
     tags: {
       type: [String],
       default: [],
@@ -90,6 +100,7 @@ const testSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+testSchema.index({ course: 1, status: 1 });
 testSchema.index({ name: "text", subject: "text", chapter: "text" });
 
 const Test = mongoose.model("Test", testSchema);

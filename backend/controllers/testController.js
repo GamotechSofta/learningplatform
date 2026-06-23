@@ -2,6 +2,7 @@ import Test from "../models/test.js";
 import asyncHandler from "../middleware/asyncHandler.js";
 import {
   buildTestQuery,
+  buildTestPayload,
   getTestDashboardStats,
   serializeTest,
 } from "../services/testService.js";
@@ -60,8 +61,13 @@ export const getTestById = asyncHandler(async (req, res) => {
 });
 
 export const createTest = asyncHandler(async (req, res) => {
-  const test = await Test.create({
+  const payload = await buildTestPayload({
     ...req.body,
+    course: req.body.course || req.body.courseId,
+  });
+
+  const test = await Test.create({
+    ...payload,
     createdBy: req.user?._id,
   });
 
@@ -69,15 +75,22 @@ export const createTest = asyncHandler(async (req, res) => {
 });
 
 export const updateTest = asyncHandler(async (req, res) => {
-  const test = await Test.findByIdAndUpdate(req.params.id, req.body, {
-    new: true,
-    runValidators: true,
-  });
-
-  if (!test) {
+  const existing = await Test.findById(req.params.id);
+  if (!existing) {
     res.status(404);
     throw new Error("Test not found");
   }
+
+  const payload = await buildTestPayload({
+    ...existing.toObject(),
+    ...req.body,
+    course: req.body.course || req.body.courseId || existing.course,
+  });
+
+  const test = await Test.findByIdAndUpdate(req.params.id, payload, {
+    new: true,
+    runValidators: true,
+  });
 
   res.json({ success: true, data: serializeTest(test) });
 });

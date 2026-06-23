@@ -17,8 +17,20 @@ export const getQuestionsBySubject = async (subject, params = {}) => {
   return data;
 };
 
-export const getQuestionStats = async () => {
-  const { data } = await api.get("/api/questions/stats");
+export const getQuestionStats = async (params = {}) => {
+  const { data } = await api.get("/api/questions/stats", { params });
+  return data.data;
+};
+
+export const getDuplicateQuestions = async (courseId) => {
+  const { data } = await api.get("/api/questions/duplicates", {
+    params: courseId ? { course: courseId } : {},
+  });
+  return data.data;
+};
+
+export const previewCsvImport = async (csvText, courseId) => {
+  const { data } = await api.post("/api/questions/import/preview", { csvText, courseId });
   return data.data;
 };
 
@@ -33,7 +45,42 @@ export const updateQuestion = async (id, payload) => {
 };
 
 export const deleteQuestion = async (id) => {
-  await api.delete(`/api/questions/${id}`);
+  const { data } = await api.delete(`/api/questions/${id}`);
+  return data;
+};
+
+export const permanentDeleteQuestion = async (id) => {
+  await api.delete(`/api/questions/${id}/permanent`);
+};
+
+export const restoreQuestion = async (id) => {
+  const { data } = await api.post(`/api/questions/${id}/restore`);
+  return data;
+};
+
+export const bulkSoftDelete = async (ids) => {
+  const { data } = await api.post("/api/questions/bulk/soft-delete", { ids });
+  return data;
+};
+
+export const bulkRestore = async (ids) => {
+  const { data } = await api.post("/api/questions/bulk/restore", { ids });
+  return data;
+};
+
+export const bulkUpdateQuestions = async (ids, updates) => {
+  const { data } = await api.put("/api/questions/bulk/update", { ids, updates });
+  return data;
+};
+
+export const cloneQuestion = async (id) => {
+  const { data } = await api.post(`/api/questions/${id}/clone`);
+  return data.data;
+};
+
+export const getQuestionVersions = async (id) => {
+  const { data } = await api.get(`/api/questions/${id}/versions`);
+  return data.data;
 };
 
 export const deleteQuestionsBulk = async (params = {}) => {
@@ -44,4 +91,25 @@ export const deleteQuestionsBulk = async (params = {}) => {
 export const importQuestions = async (payload = {}) => {
   const { data } = await api.post("/api/questions/import", payload);
   return data;
+};
+
+export const exportQuestions = async (params = {}, format = "json") => {
+  if (format === "csv") {
+    const response = await api.get("/api/questions/export", {
+      params: { ...params, format: "csv" },
+      responseType: "blob",
+    });
+    return response.data;
+  }
+  const { data } = await api.get("/api/questions/export", { params: { ...params, format: "json" } });
+  return data;
+};
+
+export const downloadBlob = (blob, filename) => {
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = filename;
+  link.click();
+  window.URL.revokeObjectURL(url);
 };

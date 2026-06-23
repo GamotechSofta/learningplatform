@@ -44,6 +44,8 @@ export const getTestDashboardStats = async () => {
 export const buildTestQuery = (query = {}) => {
   const filter = {};
 
+  if (query.course) filter.course = query.course;
+
   if (query.status) filter.status = query.status;
   if (query.subject) filter.subject = query.subject;
   if (query.q) {
@@ -62,6 +64,84 @@ export const serializeTest = (test) => {
   const doc = test.toObject ? test.toObject() : test;
   return {
     ...doc,
-    questionCount: doc.questions?.length || 0,
+    questionCount: doc.questionCount || doc.questions?.length || 0,
+    assignedCount: doc.questions?.length || 0,
+  };
+};
+
+const shuffleIds = (ids) => {
+  const copy = [...ids];
+  for (let i = copy.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [copy[i], copy[j]] = [copy[j], copy[i]];
+  }
+  return copy;
+};
+
+export const pickQuestionsFromCourse = async (
+  courseId,
+  questionCount,
+  shuffleQuestions = true
+) => {
+  const pool = await Question.find({
+    course: courseId,
+    isDeleted: { $ne: true },
+    status: { $ne: "archived" },
+  })
+    .select("_id")
+    .lean();
+
+  if (!pool.length) {
+    throw new Error("No questions found for this course. Add questions in Question Management first.");
+  }
+
+  const count = Number(questionCount);
+  if (!count || count < 1) {
+    throw new Error("Number of questions must be at least 1");
+  }
+
+  if (count > pool.length) {
+    throw new Error(`Only ${pool.length} question(s) available in this course`);
+  }
+
+  let ids = pool.map((q) => q._id);
+  if (shuffleQuestions) {
+    ids = shuffleIds(ids);
+  }
+
+  return ids.slice(0, count);
+};
+
+export const buildTestPayload = async (body) => {
+  const courseId = body.course || body.courseId;
+  if (!courseId) {
+    throw new Error("course is required");
+  }
+
+  const questionCount = Number(body.questionCount);
+  if (!body.name?.trim()) {
+    throw new Error("Test name is required");
+  }
+
+  const questions = await pickQuestionsFromCourse(
+    courseId,
+    questionCount,
+    body.shuffleQuestions !== false
+  );
+
+  return {
+    name: body.name?.trim(),
+    course: courseId,
+    durationMinutes: Number(body.durationMinutes) || 180,
+    totalMarks: Number(body.totalMarks) || 100,
+    questionCount,
+    shuffleQuestions: body.shuffleQuestions !== false,
+    shuffleOptions: body.shuffleOptions !== false,
+    negativeMarking: {
+      enabled: Boolean(body.negativeMarking?.enabled),
+      perQuestion: Number(body.negativeMarking?.perQuestion) || 1,
+    },
+    questions,
+    status: body.status || "draft",
   };
 };

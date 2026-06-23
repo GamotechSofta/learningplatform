@@ -10,7 +10,6 @@ const questionSchema = new mongoose.Schema(
     },
     questionNumber: {
       type: Number,
-      required: true,
       min: 1,
     },
     subject: {
@@ -21,8 +20,18 @@ const questionSchema = new mongoose.Schema(
     },
     shift: {
       type: String,
-      required: true,
       trim: true,
+      default: "",
+      index: true,
+    },
+    year: {
+      type: Number,
+      index: true,
+    },
+    chapter: {
+      type: String,
+      trim: true,
+      default: "",
       index: true,
     },
     question: {
@@ -39,9 +48,9 @@ const questionSchema = new mongoose.Schema(
       },
     },
     correctAnswer: {
-      type: String,
+      type: Number,
       required: true,
-      trim: true,
+      min: 1,
     },
     explanation: {
       type: String,
@@ -54,11 +63,10 @@ const questionSchema = new mongoose.Schema(
       default: "medium",
       index: true,
     },
-    chapter: {
+    image: {
       type: String,
       trim: true,
       default: "",
-      index: true,
     },
     tags: {
       type: [String],
@@ -66,21 +74,60 @@ const questionSchema = new mongoose.Schema(
     },
     questionType: {
       type: String,
-      enum: ["text", "image", "latex"],
+      enum: ["text", "image", "latex", "rich"],
       default: "text",
     },
-    imageUrl: {
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+    },
+    course: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+      index: true,
+    },
+    status: {
       type: String,
-      trim: true,
-      default: "",
+      enum: ["active", "draft", "archived"],
+      default: "active",
+      index: true,
+    },
+    isDeleted: {
+      type: Boolean,
+      default: false,
+      index: true,
+    },
+    deletedAt: Date,
+    version: {
+      type: Number,
+      default: 1,
     },
   },
   { timestamps: true }
 );
 
+questionSchema.index({ course: 1, subject: 1, chapter: 1 });
 questionSchema.index({ subject: 1, questionNumber: 1 });
-questionSchema.index({ subject: 1, shift: 1, questionNumber: 1 });
-questionSchema.index({ question: "text", subject: "text", shift: "text" });
+questionSchema.index({ question: "text", subject: "text", chapter: "text" });
+
+questionSchema.pre("save", function normalizeFields(next) {
+  if (this.correctAnswer != null) {
+    this.correctAnswer = Number(this.correctAnswer);
+  }
+  next();
+});
+
+questionSchema.set("toJSON", {
+  virtuals: true,
+  transform: (_doc, ret) => {
+    ret.imageUrl = ret.image || ret.imageUrl || "";
+    return ret;
+  },
+});
+
+questionSchema.virtual("imageUrl").get(function getImageUrl() {
+  return this.image;
+});
 
 const Question = mongoose.model("Question", questionSchema);
 

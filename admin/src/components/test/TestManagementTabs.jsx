@@ -1,7 +1,6 @@
 const TABS = [
   { id: "questions", label: "Question Management" },
   { id: "tests", label: "Test Management" },
-  { id: "settings", label: "Test Settings" },
 ];
 
 export default function TestManagementTabs({ activeTab, onTabChange }) {
