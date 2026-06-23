@@ -1,52 +1,55 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, BookOpen } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { getCategoryVisual } from '../../utils/categoryVisuals'
 
 export default function CategoryPathCard({ category }) {
-  const { Icon } = getCategoryVisual(category)
+  const { Icon, accent, iconBg, hoverBg } = getCategoryVisual(category)
 
   return (
     <Link
-      to="/download"
-      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-border bg-surface transition-all duration-200 hover:border-primary/40 hover:shadow-md hover:shadow-primary/5"
+      to={`/courses?category=${category.id}`}
+      className="group relative flex items-center gap-4 overflow-hidden rounded-xl border border-border bg-background px-4 py-4 transition-[border-color,background-color,padding] duration-300 hover:border-primary/35 hover:bg-primary/[0.03] hover:pl-5 sm:px-5 sm:py-5 sm:hover:pl-6"
     >
-      {/* Thumbnail — fixed ratio, consistent crop */}
-      <div className="relative aspect-[16/10] shrink-0 overflow-hidden bg-primary-light">
-        {category.thumbnail ? (
+      <span
+        aria-hidden
+        className="absolute inset-y-3 left-0 w-[3px] rounded-r-full bg-primary opacity-0 transition-opacity duration-300 group-hover:opacity-100"
+      />
+
+      {category.thumbnail ? (
+        <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-xl border border-border bg-surface">
           <img
             src={category.thumbnail}
             alt=""
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-[1.03]"
+            className="h-full w-full object-cover transition-[filter,opacity] duration-300 group-hover:opacity-90 group-hover:saturate-110"
             loading="lazy"
           />
-        ) : (
-          <div className="flex h-full items-center justify-center">
-            <Icon className="h-10 w-10 text-primary/30" strokeWidth={1.5} />
-          </div>
-        )}
-        <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-      </div>
+        </div>
+      ) : (
+        <div
+          className={`flex h-14 w-14 shrink-0 items-center justify-center rounded-xl transition-colors duration-300 ${iconBg} ${hoverBg}`}
+        >
+          <Icon className={`h-6 w-6 ${accent}`} strokeWidth={1.75} />
+        </div>
+      )}
 
-      {/* Content — fixed structure so every card aligns */}
-      <div className="flex flex-1 flex-col p-5">
-        <h3 className="line-clamp-1 text-base font-semibold text-text-primary group-hover:text-primary">
-          {category.title}
-        </h3>
-
-        <p className="mt-2 line-clamp-2 min-h-[2.5rem] text-sm leading-relaxed text-text-secondary">
-          {category.description || 'Expert-led video courses with structured lessons.'}
-        </p>
-
-        <div className="mt-auto flex items-center justify-between pt-4">
-          <span className="text-xs font-medium text-text-secondary">
+      <div className="min-w-0 flex-1">
+        <div className="flex flex-wrap items-center gap-2">
+          <h3 className="truncate font-display text-base font-bold text-text-primary transition-colors duration-300 group-hover:text-primary">
+            {category.title}
+          </h3>
+          <span className="rounded-md bg-surface px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-text-secondary ring-1 ring-border transition-colors duration-300 group-hover:bg-primary/10 group-hover:text-primary group-hover:ring-primary/20">
             {category.courseCount} course{category.courseCount !== 1 ? 's' : ''}
           </span>
-          <span className="inline-flex items-center gap-1 text-sm font-semibold text-primary">
-            View
-            <ArrowRight className="h-3.5 w-3.5 transition-transform group-hover:translate-x-0.5" />
-          </span>
         </div>
+        <p className="mt-1 line-clamp-2 text-sm leading-relaxed text-text-secondary">
+          {category.description || 'Expert-led video courses with structured lessons.'}
+        </p>
       </div>
+
+      <ChevronRight
+        className="h-5 w-5 shrink-0 text-text-secondary transition-[transform,color] duration-300 group-hover:translate-x-1 group-hover:text-primary"
+        strokeWidth={2}
+      />
     </Link>
   )
 }

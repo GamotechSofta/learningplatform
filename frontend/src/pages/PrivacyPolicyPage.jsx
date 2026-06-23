@@ -64,8 +64,6 @@ const sections = [
 ]
 
 export default function PrivacyPolicyPage() {
-  const effectiveDate = 'June 18, 2026'
-
   return (
     <div className="bg-background">
       <section className="border-b border-border bg-surface py-16">
@@ -73,7 +71,6 @@ export default function PrivacyPolicyPage() {
           <SectionHeading
             badge="Legal"
             title="Privacy Policy"
-            subtitle={`Effective date: ${effectiveDate}`}
             align="left"
           />
         </div>
