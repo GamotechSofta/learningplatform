@@ -28,7 +28,7 @@ export default function DownloadPage() {
           <SectionHeading
             badge="Mobile App"
             title="Download the Vidyank app"
-            subtitle="Take your courses anywhere. Available on Android and iOS."
+            subtitle="Take your courses anywhere. Available on Android."
           />
         </div>
       </section>
@@ -99,15 +99,7 @@ export default function DownloadPage() {
                   <Download className="h-5 w-5" />
                   Google Play
                 </Button>
-                <Button href="#" variant="outline" size="lg" className="min-w-[200px]">
-                  <Download className="h-5 w-5" />
-                  App Store
-                </Button>
               </div>
-
-              <p className="mt-4 text-xs text-text-secondary">
-                App Store link will be updated when the iOS app is published.
-              </p>
             </div>
           </div>
         </div>

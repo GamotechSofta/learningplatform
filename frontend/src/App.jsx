@@ -6,10 +6,15 @@ import PrivacyPolicyPage from './pages/PrivacyPolicyPage'
 import CoursesPage from './pages/CoursesPage'
 import CourseDetailPage from './pages/CourseDetailPage'
 import PaymentPrivacyPolicyPage from './pages/PaymentPrivacyPolicyPage'
+import RefundPolicyPage from './pages/RefundPolicyPage'
+import CancellationPolicyPage from './pages/CancellationPolicyPage'
+import TermsAndConditionsPage from './pages/TermsAndConditionsPage'
+import ScrollToTop from './components/common/ScrollToTop'
 
 export default function App() {
   return (
     <BrowserRouter>
+      <ScrollToTop />
       <Routes>
         <Route element={<Layout />}>
           <Route path="/" element={<HomePage />} />
@@ -18,6 +23,9 @@ export default function App() {
           <Route path="/courses" element={<CoursesPage />} />
           <Route path="/courses/:id" element={<CourseDetailPage />} />
           <Route path="/payment-privacy" element={<PaymentPrivacyPolicyPage />} />
+          <Route path="/refund-policy" element={<RefundPolicyPage />} />
+          <Route path="/cancellation-policy" element={<CancellationPolicyPage />} />
+          <Route path="/terms-and-conditions" element={<TermsAndConditionsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

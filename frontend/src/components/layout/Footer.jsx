@@ -84,6 +84,15 @@ export default function Footer() {
             <Link to="/payment-privacy" className="text-sm text-text-secondary hover:text-primary">
               Payment Privacy Policy
             </Link>
+            <Link to="/refund-policy" className="text-sm text-text-secondary hover:text-primary">
+              Refund Policy
+            </Link>
+            <Link to="/cancellation-policy" className="text-sm text-text-secondary hover:text-primary">
+              Cancellation Policy
+            </Link>
+            <Link to="/terms-and-conditions" className="text-sm text-text-secondary hover:text-primary">
+              Terms & Conditions
+            </Link>
           </div>
         </div>
       </div>
