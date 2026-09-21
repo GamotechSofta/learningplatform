@@ -92,7 +92,7 @@ export default function DownloadPage() {
 
               <div className="mt-10 flex flex-wrap gap-4">
                 <Button
-                  href="#"
+                  href="https://play.google.com/store/apps/details?id=com.vidyank.vidyank&pcampaignid=web_share"
                   size="lg"
                   className="min-w-[200px]"
                 >
@@ -106,7 +106,7 @@ export default function DownloadPage() {
               </div>
 
               <p className="mt-4 text-xs text-text-secondary">
-                Store links will be updated when the app is published.
+                App Store link will be updated when the iOS app is published.
               </p>
             </div>
           </div>

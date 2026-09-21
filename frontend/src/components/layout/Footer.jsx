@@ -16,12 +16,22 @@ export default function Footer() {
               Learn smarter with expert-led courses for school, competitive exams, and professional
               skills — on web and mobile.
             </p>
-            <Link
-              to="/download"
-              className="mt-4 inline-block text-sm font-semibold text-primary hover:text-primary-dark"
-            >
-              Download the app
-            </Link>
+            <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2">
+              <Link
+                to="/download"
+                className="text-sm font-semibold text-primary hover:text-primary-dark"
+              >
+                Download the app
+              </Link>
+              <a
+                href="https://play.google.com/store/apps/details?id=com.vidyank.vidyank&pcampaignid=web_share"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-semibold text-primary hover:text-primary-dark"
+              >
+                Google Play
+              </a>
+            </div>
           </div>
 
           <div>
