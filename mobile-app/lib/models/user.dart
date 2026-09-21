@@ -4,6 +4,7 @@ class User {
     required this.name,
     required this.email,
     required this.role,
+    this.phone,
     this.token,
     this.learningTrack,
   });
@@ -12,6 +13,7 @@ class User {
   final String name;
   final String email;
   final String role;
+  final String? phone;
   final String? token;
   final String? learningTrack;
 
@@ -23,6 +25,7 @@ class User {
     String? name,
     String? email,
     String? role,
+    String? phone,
     String? token,
     String? learningTrack,
   }) {
@@ -31,6 +34,7 @@ class User {
       name: name ?? this.name,
       email: email ?? this.email,
       role: role ?? this.role,
+      phone: phone ?? this.phone,
       token: token ?? this.token,
       learningTrack: learningTrack ?? this.learningTrack,
     );
@@ -42,6 +46,7 @@ class User {
       name: json['name']?.toString() ?? '',
       email: json['email']?.toString() ?? '',
       role: json['role']?.toString() ?? 'student',
+      phone: _readOptionalString(json['phone']),
       token: json['token']?.toString(),
       learningTrack: _readOptionalString(json['learningTrack']),
     );
@@ -65,6 +70,7 @@ class User {
         'name': name,
         'email': email,
         'role': role,
+        if (phone != null) 'phone': phone,
         if (learningTrack != null) 'learningTrack': learningTrack,
       };
 }

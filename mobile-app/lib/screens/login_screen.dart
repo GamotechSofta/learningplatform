@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:go_router/go_router.dart';
 import 'package:provider/provider.dart';
 
 import '../core/theme/app_colors.dart';
-import '../core/theme/themed_colors.dart';
 import '../core/utils/api_errors.dart';
 import '../core/utils/post_auth_sync.dart';
 import '../core/utils/resume_learning_flow.dart';
@@ -16,6 +16,8 @@ import '../providers/video_engagement_provider.dart';
 import '../widgets/auth/auth_screen_layout.dart';
 import '../widgets/auth/auth_text_field.dart';
 
+enum _LoginStep { phone, otp }
+
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
 
@@ -25,21 +27,54 @@ class LoginScreen extends StatefulWidget {
 
 class _LoginScreenState extends State<LoginScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
-  final _passwordController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _otpController = TextEditingController();
+  _LoginStep _step = _LoginStep.phone;
   bool _submitting = false;
-  bool _obscure = true;
-  bool _rememberMe = false;
   String? _error;
+  String _phone = '';
 
   @override
   void dispose() {
-    _emailController.dispose();
-    _passwordController.dispose();
+    _phoneController.dispose();
+    _otpController.dispose();
     super.dispose();
   }
 
-  Future<void> _submit() async {
+  String _normalizePhone(String value) {
+    final digits = value.replaceAll(RegExp(r'\D'), '');
+    if (digits.length >= 10) return digits.substring(digits.length - 10);
+    return digits;
+  }
+
+  Future<void> _sendOtp() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    setState(() {
+      _submitting = true;
+      _error = null;
+    });
+
+    try {
+      final phone = _normalizePhone(_phoneController.text);
+      final result = await context.read<AuthProvider>().sendLoginOtp(phone);
+      if (!mounted) return;
+      setState(() {
+        _phone = result.phone;
+        _step = _LoginStep.otp;
+        _otpController.clear();
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('OTP sent to +91 $phone')),
+      );
+    } catch (error) {
+      setState(() => _error = ApiErrors.friendlyMessage(error));
+    } finally {
+      if (mounted) setState(() => _submitting = false);
+    }
+  }
+
+  Future<void> _verifyOtp() async {
     if (!_formKey.currentState!.validate()) return;
 
     setState(() {
@@ -54,10 +89,8 @@ class _LoginScreenState extends State<LoginScreen> {
       final notifications = context.read<NotificationProvider>();
       final saved = context.read<SavedCoursesProvider>();
       final engagement = context.read<VideoEngagementProvider>();
-      await auth.login(
-        _emailController.text.trim(),
-        _passwordController.text,
-      );
+
+      await auth.verifyLoginOtp(_phone, _otpController.text.trim());
 
       await syncUserDataAfterAuth(
         auth: auth,
@@ -79,7 +112,7 @@ class _LoginScreenState extends State<LoginScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Welcome back, ${auth.user?.name.split(' ').first ?? 'Learner'}! 🎓',
+              'Welcome back, ${auth.user?.name.split(' ').first ?? 'Learner'}!',
             ),
           ),
         );
@@ -94,12 +127,14 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final c = context.colors;
+    final isOtp = _step == _LoginStep.otp;
+
     return AuthScreenLayout(
       title: 'Welcome ',
       titleHighlight: 'Back!',
-      subtitle:
-          'Good to see you again. Jump back into your courses, track your progress, and keep moving forward.',
+      subtitle: isOtp
+          ? 'Enter the OTP sent to +91 $_phone to continue learning.'
+          : 'Sign in with your mobile number. We’ll send a one-time password.',
       footerText: "Don't have an account? ",
       footerAction: 'Sign Up',
       onFooterTap: () => context.push('/register'),
@@ -116,70 +151,74 @@ class _LoginScreenState extends State<LoginScreen> {
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: AppColors.error.withValues(alpha: 0.35)),
                 ),
-                child: Text(_error!, style: const TextStyle(color: AppColors.error, fontSize: 13)),
+                child: Text(
+                  _error!,
+                  style: const TextStyle(color: AppColors.error, fontSize: 13),
+                ),
               ),
-              SizedBox(height: 16),
+              const SizedBox(height: 16),
             ],
-            AuthTextField(
-              controller: _emailController,
-              label: 'Email Address',
-              keyboardType: TextInputType.emailAddress,
-              highlightBorder: true,
-              validator: (value) =>
-                  value == null || value.trim().isEmpty ? 'Email is required' : null,
-            ),
-            SizedBox(height: 18),
-            AuthTextField(
-              controller: _passwordController,
-              label: 'Password',
-              obscureText: _obscure,
-              suffixIcon: IconButton(
-                icon: Icon(
-                  _obscure ? Icons.visibility_off_outlined : Icons.visibility_outlined,
-                  color: c.textSecondary,
-                ),
-                onPressed: () => setState(() => _obscure = !_obscure),
+            if (!isOtp)
+              AuthTextField(
+                controller: _phoneController,
+                label: 'Mobile Number',
+                keyboardType: TextInputType.phone,
+                highlightBorder: true,
+                maxLength: 10,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                validator: (value) {
+                  final phone = _normalizePhone(value ?? '');
+                  if (phone.length != 10) {
+                    return 'Enter a valid 10-digit mobile number';
+                  }
+                  if (!RegExp(r'^[6-9]').hasMatch(phone)) {
+                    return 'Enter a valid Indian mobile number';
+                  }
+                  return null;
+                },
+              )
+            else ...[
+              AuthTextField(
+                controller: _otpController,
+                label: 'OTP',
+                keyboardType: TextInputType.number,
+                highlightBorder: true,
+                maxLength: 6,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                validator: (value) {
+                  if (value == null || value.trim().length < 4) {
+                    return 'Enter the OTP';
+                  }
+                  return null;
+                },
               ),
-              validator: (value) =>
-                  value == null || value.isEmpty ? 'Password is required' : null,
-            ),
-            SizedBox(height: 14),
-            Row(
-              children: [
-                SizedBox(
-                  width: 22,
-                  height: 22,
-                  child: Checkbox(
-                    value: _rememberMe,
-                    onChanged: (value) => setState(() => _rememberMe = value ?? false),
-                    activeColor: AppColors.authBlue,
-                    side: BorderSide(color: c.border),
-                    materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
+              const SizedBox(height: 12),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: _submitting
+                      ? null
+                      : () => setState(() {
+                            _step = _LoginStep.phone;
+                            _error = null;
+                            _otpController.clear();
+                          }),
+                  child: const Text('Change number'),
                 ),
-                SizedBox(width: 8),
-                Text(
-                  'Remember Me',
-                  style: TextStyle(fontSize: 13, color: c.textSecondary),
+              ),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: TextButton(
+                  onPressed: _submitting ? null : _sendOtp,
+                  child: const Text('Resend OTP'),
                 ),
-                const Spacer(),
-                TextButton(
-                  onPressed: () {},
-                  style: TextButton.styleFrom(
-                    foregroundColor: c.textSecondary,
-                    padding: EdgeInsets.zero,
-                    minimumSize: Size.zero,
-                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                  ),
-                  child: const Text('Forgot Password?', style: TextStyle(fontSize: 13)),
-                ),
-              ],
-            ),
+              ),
+            ],
             const SizedBox(height: 24),
             AuthPrimaryButton(
-              label: 'Log in',
+              label: isOtp ? 'Verify & Log in' : 'Get OTP',
               loading: _submitting,
-              onPressed: _submit,
+              onPressed: isOtp ? _verifyOtp : _sendOtp,
             ),
           ],
         ),

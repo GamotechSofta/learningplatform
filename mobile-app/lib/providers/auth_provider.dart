@@ -67,17 +67,41 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> login(String email, String password) async {
-    final user = await _authService.login(email: email, password: password);
+  Future<OtpSendResult> sendLoginOtp(String phone) {
+    return _authService.sendLoginOtp(phone: phone);
+  }
+
+  Future<void> verifyLoginOtp(String phone, String otp) async {
+    final user = await _authService.verifyLoginOtp(phone: phone, otp: otp);
     _user = await _mergeLocalLearningTrack(user);
     notifyListeners();
   }
 
-  Future<void> register(String name, String email, String password) async {
-    final user = await _authService.register(
+  Future<OtpSendResult> sendSignupOtp({
+    required String name,
+    required String email,
+    required String phone,
+  }) {
+    return _authService.sendSignupOtp(
       name: name,
       email: email,
+      phone: phone,
+    );
+  }
+
+  Future<SignupOtpResult> verifySignupOtp(String phone, String otp) {
+    return _authService.verifySignupOtp(phone: phone, otp: otp);
+  }
+
+  Future<void> completeSignup({
+    required String signupToken,
+    required String password,
+    required String confirmPassword,
+  }) async {
+    final user = await _authService.completeSignup(
+      signupToken: signupToken,
       password: password,
+      confirmPassword: confirmPassword,
     );
     _user = await _mergeLocalLearningTrack(user);
     notifyListeners();

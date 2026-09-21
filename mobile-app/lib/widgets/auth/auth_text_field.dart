@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/themed_colors.dart';
@@ -13,6 +14,9 @@ class AuthTextField extends StatelessWidget {
     this.suffixIcon,
     this.validator,
     this.highlightBorder = false,
+    this.maxLength,
+    this.inputFormatters,
+    this.textInputAction,
   });
 
   final TextEditingController controller;
@@ -22,6 +26,9 @@ class AuthTextField extends StatelessWidget {
   final Widget? suffixIcon;
   final String? Function(String?)? validator;
   final bool highlightBorder;
+  final int? maxLength;
+  final List<TextInputFormatter>? inputFormatters;
+  final TextInputAction? textInputAction;
 
   @override
   Widget build(BuildContext context) {
@@ -33,6 +40,9 @@ class AuthTextField extends StatelessWidget {
       obscureText: obscureText,
       keyboardType: keyboardType,
       validator: validator,
+      maxLength: maxLength,
+      inputFormatters: inputFormatters,
+      textInputAction: textInputAction,
       style: TextStyle(
         color: c.textPrimary,
         fontSize: 15,
@@ -40,6 +50,7 @@ class AuthTextField extends StatelessWidget {
       ),
       decoration: InputDecoration(
         labelText: label,
+        counterText: '',
         labelStyle: TextStyle(
           color: highlightBorder ? AppColors.authBlue : c.textSecondary,
           fontWeight: FontWeight.w600,
