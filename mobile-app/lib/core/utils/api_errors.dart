@@ -6,15 +6,22 @@ class ApiErrors {
   ApiErrors._();
 
   static String friendlyMessage(Object error) {
-    if (error is ApiException) return error.message;
+    if (error is ApiException) {
+      return _sanitize(error.message, statusCode: error.statusCode);
+    }
 
     if (error is DioException) {
       final nested = error.error;
-      if (nested is ApiException) return nested.message;
+      if (nested is ApiException) {
+        return _sanitize(nested.message, statusCode: nested.statusCode);
+      }
 
       final data = error.response?.data;
       if (data is Map && data['message'] is String) {
-        return data['message'] as String;
+        return _sanitize(
+          data['message'] as String,
+          statusCode: error.response?.statusCode,
+        );
       }
 
       switch (error.type) {
@@ -25,29 +32,48 @@ class ApiErrors {
         case DioExceptionType.connectionError:
           return 'Could not reach the server. Check your internet connection.';
         case DioExceptionType.badResponse:
-          final code = error.response?.statusCode;
-          if (code == 401) return 'Your session expired. Please sign in again.';
-          if (code == 404) return 'This feature is not available on the server yet.';
-          if (code != null && code >= 500) {
-            return 'Server error ($code). Please try again in a moment.';
-          }
-          break;
+          return _sanitize(
+            error.message ?? 'Request failed',
+            statusCode: error.response?.statusCode,
+          );
         default:
           break;
       }
 
       if (error.message != null && error.message!.isNotEmpty) {
-        return error.message!;
+        return _sanitize(error.message!);
       }
     }
 
     final text = error.toString();
     if (text.startsWith('Exception: ')) {
-      return text.replaceFirst('Exception: ', '');
+      return _sanitize(text.replaceFirst('Exception: ', ''));
     }
     if (text.contains('DioException')) {
-      return 'Something went wrong while loading data. Pull to refresh.';
+      return 'Something went wrong. Please try again.';
     }
-    return text;
+    return _sanitize(text);
+  }
+
+  static String _sanitize(String message, {int? statusCode}) {
+    final lower = message.toLowerCase();
+    final looksLikeDioDump = lower.contains('validatestatus') ||
+        lower.contains('requestoptions') ||
+        lower.contains('status code of') ||
+        lower.contains('developer.mozilla.org');
+
+    if (statusCode == 404 || (looksLikeDioDump && lower.contains('404'))) {
+      return 'OTP service is not available on the server yet. Please update the backend or try again later.';
+    }
+    if (statusCode == 401) {
+      return 'Your session expired. Please sign in again.';
+    }
+    if (statusCode != null && statusCode >= 500) {
+      return 'Server error ($statusCode). Please try again in a moment.';
+    }
+    if (looksLikeDioDump) {
+      return 'Something went wrong while contacting the server. Please try again.';
+    }
+    return message;
   }
 }
