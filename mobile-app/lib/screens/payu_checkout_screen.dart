@@ -91,13 +91,15 @@ class _PayUCheckoutScreenState extends State<PayUCheckoutScreen> {
           },
           onPageStarted: (url) {
             if (PayUCheckoutLoader.isReturnUrl(url)) {
-              _completeFromReturnUrl(url);
+              if (mounted) setState(() => _loading = true);
               return;
             }
             if (PayUCheckoutLoader.isPayUHostedUrl(url)) {
               _revealWebView();
             }
           },
+          // The return page must load: PayU's POST to it is what lets the
+          // server verify the payment and activate the course.
           onPageFinished: (url) {
             if (PayUCheckoutLoader.isReturnUrl(url)) {
               _completeFromReturnUrl(url);
@@ -106,6 +108,10 @@ class _PayUCheckoutScreenState extends State<PayUCheckoutScreen> {
             _revealWebView();
           },
           onWebResourceError: (error) {
+            if (PayUCheckoutLoader.isReturnUrl(error.url ?? '')) {
+              _completeFromReturnUrl(error.url!);
+              return;
+            }
             if (!_isFatalWebError(error)) return;
             if (PayUCheckoutLoader.isPayUHostedUrl(error.url ?? '')) {
               _revealWebView();
@@ -113,13 +119,7 @@ class _PayUCheckoutScreenState extends State<PayUCheckoutScreen> {
             }
             _fail(_friendlyWebError(error));
           },
-          onNavigationRequest: (request) {
-            if (PayUCheckoutLoader.isReturnUrl(request.url)) {
-              _completeFromReturnUrl(request.url);
-              return NavigationDecision.prevent;
-            }
-            return NavigationDecision.navigate;
-          },
+          onNavigationRequest: (request) => NavigationDecision.navigate,
         ),
       );
 
@@ -222,9 +222,17 @@ class _PayUCheckoutScreenState extends State<PayUCheckoutScreen> {
 
     final expectedSuccess = url.contains('/return/success');
     try {
-      await Future<void>.delayed(const Duration(milliseconds: 800));
-      final status =
+      var status =
           await widget.paymentService.getPaymentStatus(widget.payment.txnid);
+      // PayU's verify API can lag a few seconds behind the redirect.
+      for (var attempt = 0;
+          attempt < 5 && expectedSuccess && status.status == 'pending';
+          attempt++) {
+        await Future<void>.delayed(const Duration(seconds: 3));
+        if (!mounted) return;
+        status =
+            await widget.paymentService.getPaymentStatus(widget.payment.txnid);
+      }
       if (!mounted) return;
       await widget.onFinished(status);
     } catch (error) {

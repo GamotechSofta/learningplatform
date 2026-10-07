@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../core/theme/app_colors.dart';
 import '../core/theme/themed_colors.dart';
+import '../core/utils/course_filter_request.dart';
 import '../core/utils/course_list_utils.dart';
 import '../models/course.dart';
 import '../providers/catalog_provider.dart';
@@ -27,6 +28,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
   final _scrollController = ScrollController();
 
   String _query = '';
+  String? _categoryId;
   String? _level;
   CoursePriceFilter _priceFilter = CoursePriceFilter.all;
   CourseSortOption _sort = CourseSortOption.nameAsc;
@@ -34,7 +36,9 @@ class _CoursesScreenState extends State<CoursesScreen> {
   @override
   void initState() {
     super.initState();
+    CourseFilterRequest.pending.addListener(_applyPendingFilters);
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _applyPendingFilters();
       context.read<CatalogProvider>().load(forceRefresh: true);
     });
     _searchController.addListener(() {
@@ -44,9 +48,26 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
   @override
   void dispose() {
+    CourseFilterRequest.pending.removeListener(_applyPendingFilters);
     _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
+  }
+
+  void _applyPendingFilters() {
+    final filters = CourseFilterRequest.pending.value;
+    if (filters == null || !mounted) return;
+    CourseFilterRequest.pending.value = null;
+
+    _searchController.clear();
+    setState(() {
+      _query = '';
+      _categoryId = filters.categoryId;
+      _level = filters.level;
+      _priceFilter = filters.priceFilter;
+      _sort = filters.sort;
+    });
+    if (_scrollController.hasClients) _scrollController.jumpTo(0);
   }
 
   Future<void> _refresh() =>
@@ -54,6 +75,7 @@ class _CoursesScreenState extends State<CoursesScreen> {
 
   void _clearFilters() {
     setState(() {
+      _categoryId = null;
       _level = null;
       _priceFilter = CoursePriceFilter.all;
       _sort = CourseSortOption.nameAsc;
@@ -63,15 +85,24 @@ class _CoursesScreenState extends State<CoursesScreen> {
   }
 
   bool get _hasActiveFilters =>
+      _categoryId != null ||
       _level != null ||
       _priceFilter != CoursePriceFilter.all ||
       _sort != CourseSortOption.nameAsc ||
       _query.trim().isNotEmpty;
 
+  String _categoryName(CatalogProvider catalog, String id) {
+    for (final category in catalog.categories) {
+      if (category.id == id) return category.name;
+    }
+    return 'Category';
+  }
+
   List<Course> _filteredCourses(List<Course> allCourses) =>
       CourseListUtils.filterAndSort(
         courses: allCourses,
         query: _query,
+        categoryId: _categoryId,
         level: _level,
         priceFilter: _priceFilter,
         sort: _sort,
@@ -131,6 +162,28 @@ class _CoursesScreenState extends State<CoursesScreen> {
                               ),
                             ),
                           ),
+                          if (_categoryId != null)
+                            SliverToBoxAdapter(
+                              child: Padding(
+                                padding:
+                                    const EdgeInsets.fromLTRB(20, 0, 20, 4),
+                                child: Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: InputChip(
+                                    avatar: const Icon(
+                                      Icons.category_outlined,
+                                      size: 16,
+                                      color: AppColors.primary,
+                                    ),
+                                    label: Text(
+                                      _categoryName(catalog, _categoryId!),
+                                    ),
+                                    onDeleted: () =>
+                                        setState(() => _categoryId = null),
+                                  ),
+                                ),
+                              ),
+                            ),
                           SliverPersistentHeader(
                             pinned: true,
                             delegate: CourseRefineStickyHeader(

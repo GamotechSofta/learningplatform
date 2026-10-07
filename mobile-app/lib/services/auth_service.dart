@@ -50,6 +50,16 @@ class AuthService {
   final ApiClient _api;
   final SessionStorage _session;
 
+  Future<User> login({required String email, required String password}) async {
+    final user = await _api.postAuthData(
+      '/api/auth/login',
+      body: {'email': email, 'password': password},
+      parser: (data, token) => User.fromJson(data).copyWith(token: token),
+    );
+    await _persistSession(user);
+    return user;
+  }
+
   Future<OtpSendResult> sendLoginOtp({required String phone}) async {
     return _api.postData(
       '/api/auth/login/send-otp',

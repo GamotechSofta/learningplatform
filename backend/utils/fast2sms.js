@@ -30,10 +30,38 @@ const generateLocalOtp = () => {
 
 const useFast2SmsManagedOtp = () => Boolean(apiKey() && otpTemplateId());
 
+/** Fixed OTP for a single test number (e.g. Play Store review); no SMS is sent. */
+const testOtpFor = (normalizedPhone) => {
+  const testPhone = normalizePhone(process.env.TEST_OTP_PHONE || "");
+  const testCode = process.env.TEST_OTP_CODE?.trim() || "";
+  if (!testPhone || !/^\d{4,10}$/.test(testCode)) return null;
+  return normalizedPhone === testPhone ? testCode : null;
+};
+
 const smsFail = (message, statusCode = 502) => {
-  const error = new Error(message || "Failed to send OTP SMS");
+  const raw = message || "Failed to send OTP SMS";
+  if (/wallet|balance|recharge/i.test(raw)) {
+    console.error(`[otp] Fast2SMS rejected send: ${raw}`);
+    const error = new Error(
+      "OTP service is temporarily unavailable. Please try again later or log in with email."
+    );
+    error.statusCode = 503;
+    throw error;
+  }
+  const error = new Error(raw);
   error.statusCode = statusCode;
   throw error;
+};
+
+/**
+ * Route order to try: "otp" (Fast2SMS OTP route, cheapest, needs website
+ * verification), "q" (Quick SMS, custom text), or "auto" (otp, then q).
+ */
+const smsRoutes = () => {
+  const route = process.env.FAST2SMS_ROUTE?.trim().toLowerCase() || "auto";
+  if (route === "otp") return ["otp"];
+  if (route === "q") return ["q"];
+  return ["otp", "q"];
 };
 
 const sendViaSmartOtp = async (mobile) => {
@@ -63,46 +91,69 @@ const sendViaSmartOtp = async (mobile) => {
   }
 };
 
-const sendViaQuickSms = async (mobile, otp) => {
-  const message = `Your Vidyank verification code is ${otp}. Valid for ${otpExpiryMinutes()} minutes. Do not share this OTP.`;
+const postBulkSms = async (body) => {
+  const response = await axios.post(FAST2SMS_QUICK_SMS_URL, body, {
+    headers: {
+      authorization: apiKey(),
+      "Content-Type": "application/json",
+    },
+    timeout: 20000,
+    validateStatus: () => true,
+  });
+  if (response.data?.return) return null;
+  const raw = response.data?.message;
+  return (Array.isArray(raw) ? raw.join(", ") : raw) || `Fast2SMS ${body.route} send failed`;
+};
 
-  const response = await axios.post(
-    FAST2SMS_QUICK_SMS_URL,
-    {
+const sendViaQuickSms = async (mobile, otp) => {
+  const bodies = {
+    otp: { route: "otp", variables_values: otp, numbers: mobile, flash: 0 },
+    q: {
       route: "q",
-      message,
+      message: `Your Vidyank verification code is ${otp}. Valid for ${otpExpiryMinutes()} minutes. Do not share this OTP.`,
       numbers: mobile,
       flash: 0,
     },
-    {
-      headers: {
-        authorization: apiKey(),
-        "Content-Type": "application/json",
-      },
-      timeout: 20000,
-      validateStatus: () => true,
-    }
-  );
+  };
 
-  if (!response.data?.return) {
-    const raw = response.data?.message;
-    const detail = Array.isArray(raw) ? raw.join(", ") : raw;
-    smsFail(detail || "Fast2SMS Quick SMS send failed");
+  const failures = [];
+  for (const route of smsRoutes()) {
+    const failure = await postBulkSms(bodies[route]);
+    if (!failure) return;
+    console.warn(`[otp] Fast2SMS route "${route}" failed: ${failure}`);
+    failures.push(failure);
   }
+
+  smsFail(failures.find((f) => /wallet|balance|recharge/i.test(f)) || failures.at(-1));
 };
 
 /**
  * Create/replace an OTP challenge and deliver the code by SMS (never returns the OTP).
  */
 export const sendOtpChallenge = async ({ phone, purpose, name, email }) => {
-  if (!apiKey()) {
+  const normalized = normalizePhone(phone);
+  const testOtp = testOtpFor(normalized);
+
+  if (!apiKey() && !testOtp) {
     smsFail("SMS is not configured. Set FAST2SMS_API_KEY in backend .env.", 500);
   }
 
-  const normalized = normalizePhone(phone);
   const expiresAt = new Date(Date.now() + otpExpiryMinutes() * 60 * 1000);
 
   await OtpChallenge.deleteMany({ phone: normalized, purpose });
+
+  if (testOtp) {
+    await OtpChallenge.create({
+      phone: normalized,
+      purpose,
+      name,
+      email,
+      otpHash: await bcrypt.hash(testOtp, 10),
+      expiresAt,
+    });
+    console.log(`[otp] ${purpose} test OTP issued for ${normalized} (no SMS)`);
+    return { phone: normalized, expiresInMinutes: otpExpiryMinutes() };
+  }
 
   if (useFast2SmsManagedOtp()) {
     await sendViaSmartOtp(normalized);

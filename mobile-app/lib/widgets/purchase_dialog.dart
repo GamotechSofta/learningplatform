@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../core/theme/themed_colors.dart';
+import '../core/utils/course_access.dart';
 import '../models/course.dart';
 import 'thumbnail_image.dart';
 
@@ -52,7 +53,9 @@ class PurchaseDialog {
                 ),
                 SizedBox(height: 8),
                 Text(
-                  'Only the first video is free as a demo. Purchase to unlock all ${course.videoCount} videos in this course.',
+                  CourseAccess.hasFreePreview(course)
+                      ? 'Only the first video is free as a demo. Purchase to unlock all ${course.videoCount} videos in this course.'
+                      : 'Purchase this course to watch its video.',
                   style: TextStyle(color: c.textSecondary, height: 1.5),
                 ),
                 const SizedBox(height: 20),

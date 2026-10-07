@@ -6,6 +6,7 @@ import cookieParser from "cookie-parser";
 import { corsMiddleware } from "./config/cors.js";
 import connectDB from "./config/db.js";
 import errorHandler from "./middleware/errorHandler.js";
+import { ensureTestUser } from "./utils/testUser.js";
 import authRoutes from "./routes/authRoutes.js";
 import userRoutes from "./routes/userRoutes.js";
 import categoryRoutes from "./routes/categoryRoutes.js";
@@ -20,7 +21,15 @@ import testRoutes from "./routes/testRoutes.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-connectDB();
+connectDB().then(() =>
+  ensureTestUser()
+    .then((result) => {
+      if (result) {
+        console.log(`[test-user] ${result.created ? "created" : "ready"}: ${result.user.phone}`);
+      }
+    })
+    .catch((err) => console.error("[test-user]", err.message))
+);
 
 const app = express();
 app.set("trust proxy", 1);

@@ -62,18 +62,23 @@ class ApiErrors {
         lower.contains('status code of') ||
         lower.contains('developer.mozilla.org');
 
-    if (statusCode == 404 || (looksLikeDioDump && lower.contains('404'))) {
-      return 'OTP service is not available on the server yet. Please update the backend or try again later.';
+    final hasServerMessage = message.trim().isNotEmpty &&
+        !looksLikeDioDump &&
+        lower != 'request failed';
+
+    if (statusCode != null && statusCode >= 500) {
+      return hasServerMessage
+          ? message
+          : 'Server error ($statusCode). Please try again in a moment.';
+    }
+    if (hasServerMessage) return message;
+
+    if (statusCode == 404 || lower.contains('404')) {
+      return 'This feature is not available on the server yet. Please try again later.';
     }
     if (statusCode == 401) {
       return 'Your session expired. Please sign in again.';
     }
-    if (statusCode != null && statusCode >= 500) {
-      return 'Server error ($statusCode). Please try again in a moment.';
-    }
-    if (looksLikeDioDump) {
-      return 'Something went wrong while contacting the server. Please try again.';
-    }
-    return message;
+    return 'Something went wrong while contacting the server. Please try again.';
   }
 }

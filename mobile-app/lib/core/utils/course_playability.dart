@@ -23,8 +23,10 @@ class CoursePlayability {
       return hasPlayableVideo(course);
     }
 
-    // Summary/list payloads: require explicit playable flag plus a positive count.
-    return course.hasPlayableVideos == true && course.videoCount > 0;
+    // Summary/list payloads: some endpoints omit videoCount, so the server's
+    // playable flag is enough on its own.
+    if (course.hasPlayableVideos == true) return true;
+    return course.videoCount > 0;
   }
 
   static List<Course> filterListable(List<Course> courses) {

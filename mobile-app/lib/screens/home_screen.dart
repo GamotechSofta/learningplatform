@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 
 import '../core/theme/app_colors.dart';
 import '../core/constants/learning_tracks.dart';
+import '../core/utils/category_list_utils.dart';
 import '../core/utils/course_recommendations.dart';
 import '../models/category.dart';
 import '../models/course.dart';
@@ -194,7 +195,7 @@ class _HomeScreenState extends State<HomeScreen> {
               const SizedBox(height: 14),
               _buildCategoriesSection(
                 CourseRecommendations.categoriesForTrack(
-                  categories,
+                  CategoryListUtils.withCourses(categories, courses),
                   auth.user?.learningTrack,
                 ),
                 loading: loading,

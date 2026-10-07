@@ -184,6 +184,29 @@ const finalizeSuccessfulPayment = async (
   return order;
 };
 
+/**
+ * Best-effort: verifies a user's recent pending PayU orders so a payment whose
+ * return callback never reached the server still activates the course.
+ */
+export const reconcilePendingPayments = async (userId) => {
+  const since = new Date(Date.now() - 24 * 60 * 60 * 1000);
+  const pending = await PaymentOrder.find({
+    user: userId,
+    status: "pending",
+    createdAt: { $gte: since },
+  })
+    .sort({ createdAt: -1 })
+    .limit(3);
+
+  for (const order of pending) {
+    try {
+      await finalizeSuccessfulPayment(order, {}, { markFailedIfNotVerified: false });
+    } catch {
+      // Not paid (yet) — leave pending.
+    }
+  }
+};
+
 export const initiatePayUPayment = asyncHandler(async (req, res) => {
   const { courseId, plan, returnBaseUrl } = req.body;
 

@@ -10,6 +10,7 @@
     "start": "nodemon index.js",
     "dev": "nodemon index.js",
     "seed:admin": "node scripts/seedAdmin.js",
+    "seed:test-user": "node scripts/seedTestUser.js",
     "seed:categories": "node scripts/seedCategories.js",
     "seed:capcut-videos": "node scripts/seedCapcutVideos.js",
     "seed:s3": "node scripts/seedS3Content.js",

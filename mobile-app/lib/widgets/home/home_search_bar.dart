@@ -3,9 +3,20 @@ import 'package:go_router/go_router.dart';
 
 import '../../core/theme/app_colors.dart';
 import '../../core/theme/themed_colors.dart';
+import '../../core/utils/course_filter_request.dart';
+import '../../navigation/main_shell_scope.dart';
+import 'home_filter_sheet.dart';
 
 class HomeSearchBar extends StatelessWidget {
   const HomeSearchBar({super.key});
+
+  Future<void> _openFilters(BuildContext context) async {
+    final shell = MainShellScope.maybeOf(context);
+    final filters = await showHomeFilterSheet(context);
+    if (filters == null) return;
+    CourseFilterRequest.pending.value = filters;
+    shell?.selectTab(1);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,15 +53,21 @@ class HomeSearchBar extends StatelessWidget {
             ),
           ),
           SizedBox(width: 10),
-          Container(
-            height: 52,
-            width: 52,
-            decoration: BoxDecoration(
-              color: c.surface,
+          Material(
+            color: c.surface,
+            shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: c.border),
+              side: BorderSide(color: c.border),
             ),
-            child: const Icon(Icons.tune_rounded, color: AppColors.primary),
+            child: InkWell(
+              borderRadius: BorderRadius.circular(12),
+              onTap: () => _openFilters(context),
+              child: const SizedBox(
+                height: 52,
+                width: 52,
+                child: Icon(Icons.tune_rounded, color: AppColors.primary),
+              ),
+            ),
           ),
         ],
       ),

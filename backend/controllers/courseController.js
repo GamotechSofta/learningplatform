@@ -232,18 +232,23 @@ export const getVideoPlayback = asyncHandler(async (req, res) => {
     throw new Error("Course not found");
   }
 
+  // Lock against the whole course so the preview is the course's first video,
+  // not whichever video was requested.
   const courseData = course.toObject();
-  courseData.lessons = [
-    {
-      _id: video.lesson._id,
-      title: video.lesson.title,
-      videos: [video.toObject()],
-    },
-  ];
+  courseData.lessons = await resolveCourseContentDirect(course, {
+    publishedOnly: true,
+  });
   enrichCourseMedia(courseData);
+  filterUnplayableVideosFromCourseData(courseData);
   applyCourseAccess(courseData, req.user);
 
-  const enriched = courseData.lessons[0].videos[0];
+  const enriched = courseData.lessons
+    .flatMap((lesson) => lesson.videos || [])
+    .find((item) => item._id?.toString() === videoId);
+  if (!enriched) {
+    res.status(404);
+    throw new Error("Video is not available");
+  }
   const playbackUrl = pickVideoUrl(enriched);
   const hlsUrl = pickHlsUrl(enriched);
 

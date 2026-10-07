@@ -52,7 +52,8 @@ const stripLockedVideoMedia = (video) => {
 };
 
 /**
- * Every paid course shows 1 free preview video until purchased.
+ * Paid courses with 2+ videos show 1 free preview video until purchased;
+ * single-video courses have no free preview.
  * Only the purchased course is fully unlocked — other courses stay locked.
  */
 export const applyCourseAccess = (courseData, user) => {
@@ -60,11 +61,16 @@ export const applyCourseAccess = (courseData, user) => {
   const courseId = courseData._id?.toString();
   const hasPurchased = userHasPurchasedCourse(user, courseId);
   const hasAccess = !paid ? true : userHasCourseAccess(user, courseId);
+  const totalVideos = (courseData.lessons || []).reduce(
+    (sum, lesson) => sum + (lesson.videos?.length || 0),
+    0
+  );
+  const allowPreview = totalVideos > 1;
 
   courseData.isPaid = paid;
   courseData.hasPurchased = hasPurchased;
   courseData.hasAccess = hasAccess;
-  courseData.previewVideoCount = 1;
+  courseData.previewVideoCount = allowPreview ? 1 : 0;
 
   if (hasAccess) {
     for (const lesson of courseData.lessons || []) {
@@ -76,7 +82,7 @@ export const applyCourseAccess = (courseData, user) => {
     return courseData;
   }
 
-  let previewGranted = false;
+  let previewGranted = !allowPreview;
 
   for (const lesson of courseData.lessons || []) {
     lesson.videos = (lesson.videos || []).map((video) => {

@@ -5,6 +5,7 @@ import { resolveMediaUrl } from "../utils/mediaUrl.js";
 import { attachFallbackThumbnails } from "../utils/courseThumbnail.js";
 import { filterCoursesWithPlayableMedia } from "../utils/coursePlayability.js";
 import { isPaidCourse } from "../utils/courseAccess.js";
+import { attachVideoCounts } from "../utils/courseVideoCounts.js";
 
 export const createCategory = asyncHandler(async (req, res) => {
   const category = await Category.create(req.body);
@@ -213,9 +214,9 @@ export const getCategoryFull = asyncHandler(async (req, res) => {
 
   const withThumbs = await attachFallbackThumbnails(courses);
   categoryData.thumbnail = resolveMediaUrl(categoryData.thumbnail);
-  categoryData.courses = publishedOnly
-    ? await filterCoursesWithPlayableMedia(withThumbs)
-    : withThumbs;
+  categoryData.courses = await attachVideoCounts(
+    publishedOnly ? await filterCoursesWithPlayableMedia(withThumbs) : withThumbs
+  );
   if (publishedOnly) {
     categoryData.coursesCount = categoryData.courses.length;
   }

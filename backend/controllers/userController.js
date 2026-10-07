@@ -6,6 +6,7 @@ import { attachFallbackThumbnails } from "../utils/courseThumbnail.js";
 import { attachVideoCounts } from "../utils/courseVideoCounts.js";
 import { getPlayableCourseIdSet } from "../utils/coursePlayability.js";
 import { setAuthCookie } from "../utils/authCookie.js";
+import { reconcilePendingPayments } from "./paymentController.js";
 
 const generateToken = (user) =>
   jwt.sign({ id: user._id, role: user.role }, process.env.JWT_SECRET, {
@@ -149,6 +150,12 @@ export const getUserSubscriptions = asyncHandler(async (req, res) => {
   if (req.user._id.toString() !== req.params.id && req.user.role !== "admin") {
     res.status(403);
     throw new Error("Not authorized to view these subscriptions");
+  }
+
+  try {
+    await reconcilePendingPayments(req.params.id);
+  } catch {
+    // Never block the subscriptions list on PayU verification.
   }
 
   const user = await User.findById(req.params.id)

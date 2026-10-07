@@ -22,6 +22,6 @@ router.put("/:id", protect, authorize("admin"), updateUser);
 router.delete("/:id", protect, authorize("admin"), deleteUser);
 router.get("/:id/subscriptions", protect, getUserSubscriptions);
 router.post("/:id/subscriptions/purchase", protect, purchaseSubscription);
-router.post("/:id/subscriptions", protect, addSubscription);
+router.post("/:id/subscriptions", protect, authorize("admin"), addSubscription);
 
 export default router;

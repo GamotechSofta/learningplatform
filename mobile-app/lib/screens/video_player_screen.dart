@@ -211,8 +211,12 @@ class _VideoPlayerScreenState extends State<VideoPlayerScreen>
         streamingStatus: playback.streamingStatus,
       );
       final paywalled = course.isPaid && !hasFullAccess;
+      final lockedLocally =
+          paywalled && CourseAccess.isVideoLocked(course, widget.videoId);
 
-      if (playback.isLocked || (paywalled && playbackUrl.isEmpty)) {
+      if (playback.isLocked ||
+          lockedLocally ||
+          (paywalled && playbackUrl.isEmpty)) {
         if (!mounted) return;
         setState(() {
           _locked = true;

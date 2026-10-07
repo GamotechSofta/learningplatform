@@ -299,7 +299,9 @@ class _CourseDetailScreenState extends State<CourseDetailScreen> {
           const SizedBox(height: 6),
           Text(
             needsPurchase
-                ? '1 free demo video included. Purchase to unlock the rest.'
+                ? CourseAccess.hasFreePreview(course)
+                    ? '1 free demo video included. Purchase to unlock the rest.'
+                    : 'Purchase this course to watch the video.'
                 : course.isPaid
                     ? 'Full course access active.'
                     : 'All videos are free to watch.',

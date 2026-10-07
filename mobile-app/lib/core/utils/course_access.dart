@@ -1,6 +1,7 @@
 import '../../models/course.dart';
 import '../../models/lesson.dart';
-/// Enforces 1 free demo video for paid courses until the user has purchased.
+/// Enforces 1 free demo video for paid courses (with 2+ videos) until the
+/// user has purchased.
 class CourseAccess {
   CourseAccess._();
 
@@ -35,7 +36,8 @@ class CourseAccess {
       );
     }
 
-    var previewGranted = false;
+    final allowPreview = hasFreePreview(course);
+    var previewGranted = !allowPreview;
     final lessons = course.lessons.map((lesson) {
       if (lesson.videos.any((video) => video.isLocked)) {
         return lesson;
@@ -85,8 +87,25 @@ class CourseAccess {
       isPaid: course.isPaid,
       hasAccess: course.hasAccess,
       hasPurchased: course.hasPurchased,
-      previewVideoCount: 1,
+      previewVideoCount: allowPreview ? 1 : 0,
     );
+  }
+
+  /// Paid courses only get a free demo video when they have more than one video.
+  static bool hasFreePreview(Course course) {
+    final total = course.lessons.isNotEmpty
+        ? course.lessons.fold<int>(0, (sum, l) => sum + l.videos.length)
+        : course.videoCount;
+    return total > 1;
+  }
+
+  static bool isVideoLocked(Course course, String videoId) {
+    for (final lesson in course.lessons) {
+      for (final video in lesson.videos) {
+        if (video.id == videoId) return video.isLocked;
+      }
+    }
+    return false;
   }
 
   static Course _unlockAllVideos(

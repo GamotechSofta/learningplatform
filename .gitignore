@@ -128,3 +128,19 @@ temp/
 *.pid
 *.seed
 *.pid.lock
+
+# =========================
+# Android / build artifacts
+# =========================
+
+# JVM heap dumps (can be hundreds of MB)
+*.hprof
+
+# Release builds - upload to Play Console, do not commit
+*.aab
+*.apk
+mobile-app/release/
+
+# Gradle / Kotlin caches
+.gradle/
+.kotlin/

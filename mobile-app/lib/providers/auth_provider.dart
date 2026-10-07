@@ -67,6 +67,12 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> login(String email, String password) async {
+    final user = await _authService.login(email: email, password: password);
+    _user = await _mergeLocalLearningTrack(user);
+    notifyListeners();
+  }
+
   Future<OtpSendResult> sendLoginOtp(String phone) {
     return _authService.sendLoginOtp(phone: phone);
   }
